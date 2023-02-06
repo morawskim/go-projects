@@ -2,14 +2,16 @@ package main
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"log"
 )
 
-func getAllAwsEcrImages(region string, registryId string, repositoryName string) []*string {
+type ECRHelp struct {
+	svc AwsEcrSvcInterface
+}
+
+func (a *ECRHelp) getAllAwsEcrImages(registryId string, repositoryName string) []*string {
 	done := false
-	ecrSvc := ecr.New(session.New(), &aws.Config{Region: aws.String(region)})
 	var imageIds []*string
 
 	params := &ecr.ListImagesInput{
@@ -18,10 +20,10 @@ func getAllAwsEcrImages(region string, registryId string, repositoryName string)
 		RegistryId:     aws.String(registryId),
 	}
 	for !done {
-		resp, err := ecrSvc.ListImages(params)
+		resp, err := a.svc.GetAllRepositoryImagesTags(params)
 
 		if err != nil {
-			log.Println(err.Error())
+			log.Printf("Cannot get AWS ECR image rags: %v\n", err.Error())
 			return nil
 		}
 
