@@ -11,8 +11,12 @@ import (
 	"time"
 )
 
+type HttpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type ApiClientHttp struct {
-	httpClient *http.Client
+	httpClient HttpClient
 	config     *config.NoIpConfig
 }
 
