@@ -3,9 +3,9 @@ package config
 import "os"
 
 type NoIpConfig struct {
-	Username string
-	Password string
-	Hostname string
+	Username string `validate:"required"`
+	Password string `validate:"required"`
+	Hostname string `validate:"required,fqdn"`
 }
 
 func CreateNoIpConfigFromEnvVariables() *NoIpConfig {

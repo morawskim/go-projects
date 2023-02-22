@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
 	"noip-client/internal/config"
 	"noip-client/internal/iphelper"
@@ -19,6 +20,13 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		noIpConfig := config.CreateNoIpConfigFromEnvVariables()
 
+		v := validator.New()
+		err := v.Struct(noIpConfig)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 		ipHelper := iphelper.NewIpHelper()
 		currentAssignedIp, err := ipHelper.GetCurrentAssignedIp(noIpConfig.Hostname)
 		if err != nil {
@@ -33,7 +41,6 @@ var versionCmd = &cobra.Command{
 		}
 
 		if !currentAssignedIp.Equal(myCurrentPublicIp) {
-			// todo validate config, fields cannot be empty
 			noipApiClient := noip.NewApiClient(noIpConfig)
 			updateApiErr := noipApiClient.UpdateAssignedIp(currentAssignedIp)
 			if updateApiErr != nil {
