@@ -1,0 +1,9 @@
+[Unit]
+Description=Fake SSH server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/fakessh
+
+[Install]
+WantedBy=multi-user.target

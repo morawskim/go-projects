@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/gliderlabs/ssh"
 	"golang.org/x/exp/slog"
@@ -20,12 +21,16 @@ var (
 )
 
 func main() {
+	var address string
+	flag.StringVar(&address, "address", ":2222", "Address")
+	flag.Parse()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout))
 	logger.Enabled(nil, slog.LevelInfo)
 
 	// Create a new server instance
 	s := &ssh.Server{
-		Addr: "127.0.0.1:2222",
+		Addr: address,
 		// handler will never been called, because we deny all authentication request
 		Handler:         handleSession,
 		PasswordHandler: handleAuthentication,
