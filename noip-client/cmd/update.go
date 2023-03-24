@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
 	"noip-client/internal/config"
 	"noip-client/internal/iphelper"
@@ -20,7 +21,14 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.New(slog.NewJSONHandler(os.Stdout))
 		logger.Enabled(slog.LevelInfo)
-		noIpConfig := config.CreateNoIpConfigFromEnvVariables()
+
+		viper.SetConfigFile(".env")
+		if err := viper.ReadInConfig(); err != nil {
+			logger.Error("Unable to parse config file", err)
+			os.Exit(1)
+		}
+
+		noIpConfig := config.CreateFromViper()
 
 		v := validator.New()
 		err := v.Struct(noIpConfig)

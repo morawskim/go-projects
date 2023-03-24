@@ -1,6 +1,8 @@
 package config
 
-import "os"
+import (
+	"github.com/spf13/viper"
+)
 
 type NoIpConfig struct {
 	Username string `validate:"required"`
@@ -8,10 +10,10 @@ type NoIpConfig struct {
 	Hostname string `validate:"required,fqdn"`
 }
 
-func CreateNoIpConfigFromEnvVariables() *NoIpConfig {
+func CreateFromViper() *NoIpConfig {
 	return &NoIpConfig{
-		Username: os.Getenv("NOIP_USERNAME"),
-		Password: os.Getenv("NOIP_PASSWORD"),
-		Hostname: os.Getenv("NOIP_HOSTNAME"),
+		Username: viper.GetString("NOIP_USERNAME"),
+		Password: viper.GetString("NOIP_PASSWORD"),
+		Hostname: viper.GetString("NOIP_HOSTNAME"),
 	}
 }
