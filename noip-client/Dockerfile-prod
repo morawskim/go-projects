@@ -1,0 +1,4 @@
+FROM cgr.dev/chainguard/static:latest
+
+ENTRYPOINT ["/noip-client"]
+COPY noip-client /
