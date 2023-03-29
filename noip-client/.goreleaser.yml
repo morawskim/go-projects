@@ -41,13 +41,16 @@ changelog:
       - '^docs:'
       - '^test:'
 
-# Noip client to update IP of your domain.
+release:
+  disable: true
+
 dockers:
   - image_templates:
       - ghcr.io/morawskim/noip-client-go:latest
-      - ghcr.io/morawskim/noip-client-go:{{ .Tag }}
+      - morawskim/noip-client-go:latest
+      #- ghcr.io/morawskim/noip-client-go:{{ .Tag }}
     dockerfile: 'Dockerfile-prod'
-    #skip_push: true
+    skip_push: false
 
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
