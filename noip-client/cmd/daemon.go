@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -75,6 +76,11 @@ var daemonCmd = &cobra.Command{
 						} else {
 							logger.Error("Unable to update DNS record", updateError, slog.String("hostname", noIpConfig.Hostname), slog.String("username", noIpConfig.Username))
 						}
+					} else {
+						logger.Info(
+							fmt.Sprintf("Updated DNS record to a new IP address for domain %v", noIpConfig.Hostname),
+							slog.String("hostname", noIpConfig.Hostname),
+						)
 					}
 				}
 			}
