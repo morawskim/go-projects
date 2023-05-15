@@ -15,6 +15,7 @@ type User struct {
 	age      int    `myIntTag:"123"`
 }
 
+// main very long description
 // @MyAnnotation This text is description of main function
 func main() {
 	t := reflect.TypeOf(User{})
