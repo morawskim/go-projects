@@ -22,7 +22,7 @@ func UpdateNoIpDnsRecord(noIpConfig *config.NoIpConfig, ipHelper iphelper.IpHelp
 
 	if !currentAssignedIp.Equal(myCurrentPublicIp) {
 		noipApiClient := noip.NewApiClient(noIpConfig)
-		updateApiErr := noipApiClient.UpdateAssignedIp(currentAssignedIp)
+		updateApiErr := noipApiClient.UpdateAssignedIp(myCurrentPublicIp)
 		if updateApiErr != nil {
 			return errors.Wrapf(updateApiErr, "unable to update assigned noip address for host %v using username %v", noIpConfig.Hostname, noIpConfig.Username)
 		}

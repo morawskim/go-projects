@@ -32,7 +32,7 @@ func NewApiClient(config *config.NoIpConfig) *ApiClientHttp {
 func validateNoIpUpdateResponse(response string) (bool, error) {
 	status := strings.TrimSpace(response)
 
-	if status == "nochg" || status == "good" {
+	if strings.HasPrefix(status, "nochg") || strings.HasPrefix(status, "good") {
 		return true, nil
 	}
 
