@@ -75,10 +75,10 @@ func getAbsolutePathToFile(filePathFromArgs *string) (string, error) {
 	return absFilePath, nil
 }
 
-func convertImgToWebp(img image.Image) (*bytes.Buffer, error) {
+func convertImgToWebp(img image.Image, quality float32) (*bytes.Buffer, error) {
 	var webpBuf bytes.Buffer
 
-	if err := webp.Encode(&webpBuf, img, &webp.Options{}); err != nil {
+	if err := webp.Encode(&webpBuf, img, &webp.Options{Quality: quality}); err != nil {
 		return nil, fmt.Errorf("cannot encode image to webp format - %v", err)
 	}
 
@@ -136,7 +136,7 @@ func main() {
 	}
 
 	// convert to webp and create miniature
-	webpBuf, err := convertImgToWebp(img)
+	webpBuf, err := convertImgToWebp(img, 70.0)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Cannot encode image to webp format - %v", err)
 		os.Exit(1)
