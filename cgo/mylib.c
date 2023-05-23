@@ -4,6 +4,10 @@ void print_string(char* str) {
     printf("string passed from Go: %s\n", str);
 }
 
+void show_text() {
+    screaming("message passed from C to Go function");
+}
+
 void print_person(person* person) {
     printf("person struct passed from Go\n");
     printf("Name: %s\n", person->firstName);

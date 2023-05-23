@@ -11,7 +11,18 @@ import (
 
 func main() {
 	passGoStringToC()
+	fmt.Println()
+
 	passStructToC()
+	fmt.Println()
+
+	callGoFuncInC()
+	fmt.Println()
+}
+
+func callGoFuncInC() {
+	fmt.Println("Call Go func from C")
+	C.show_text()
 }
 
 func passStructToC() {
@@ -50,5 +61,4 @@ func passGoStringToC() {
 	cStr := C.CString(str)
 	C.print_string(cStr)
 	C.free(unsafe.Pointer(cStr))
-	fmt.Println()
 }

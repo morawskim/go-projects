@@ -16,6 +16,10 @@ typedef struct person {
     address *address;
 } person;
 
+extern void screaming(char *str);
+
+void show_text();
+
 void print_string(char* str);
 
 void print_person(person* person);
