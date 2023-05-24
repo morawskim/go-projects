@@ -1,7 +1,7 @@
 .PHONY: build
 
 build:
-	go build -a -o cgo-example ./main.go ./bridge.go
+	go build -a -o cgo-example
 
 run: build
 	./cgo-example

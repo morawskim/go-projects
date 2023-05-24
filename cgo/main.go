@@ -1,7 +1,7 @@
 package main
 
 /*
-#include "mylib.c"
+#include "mylib.h"
 */
 import "C"
 import (
