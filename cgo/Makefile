@@ -6,5 +6,8 @@ build:
 run: build
 	./cgo-example
 
-memory:
+memory: build
 	valgrind --leak-check=full ./cgo-example
+
+memory-benchmark:
+	GOMAXPROCS=1 valgrind  --leak-check=full go test -bench=. -benchtime=2s

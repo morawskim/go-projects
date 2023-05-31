@@ -10,11 +10,15 @@ import (
 )
 
 func main() {
-	passGoStringToC()
-	fmt.Println()
+	for i := 0; i < 100_000; i++ {
+		passGoStringToC()
+		fmt.Println()
+	}
 
-	passStructToC()
-	fmt.Println()
+	for i := 0; i < 100_000; i++ {
+		passStructToC()
+		fmt.Println()
+	}
 
 	callGoFuncInC()
 	fmt.Println()
@@ -23,6 +27,16 @@ func main() {
 func callGoFuncInC() {
 	fmt.Println("Call Go func from C")
 	C.show_text()
+}
+
+func possibleMemoryLeak() unsafe.Pointer {
+	chunk := C.malloc(1024)
+
+	return chunk
+}
+
+func freeMemoryChunk(ptr unsafe.Pointer) {
+	C.free(ptr)
 }
 
 func passStructToC() {
