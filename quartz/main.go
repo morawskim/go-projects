@@ -69,7 +69,7 @@ func displayJobs(scheduler quartz.Scheduler, jobs [5]*quartz.FunctionJob[int]) {
 	for _, job := range jobs {
 		scheduledJob, err := scheduler.GetScheduledJob(job.Key())
 		if err != nil {
-			log.Println("job does not exist anymore in scheduler")
+			log.Println("job does not exist anymore in scheduler:", err)
 			continue
 		}
 
