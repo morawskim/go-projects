@@ -1,14 +1,15 @@
 package main
 
 import (
-	_ "embed"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 )
 
-//go:embed index.html
-var indexPage []byte
+//go:embed frontend/build/*
+var content embed.FS
 
 func main() {
 
@@ -20,11 +21,12 @@ func main() {
 	//
 	//s3Client.ListO
 
+	fsys := fs.FS(content)
+	html, _ := fs.Sub(fsys, "frontend/build")
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Write(indexPage)
-	})
+	mux.Handle("/", http.FileServer(http.FS(html)))
+
 	fmt.Println("Listing....")
 	err := http.ListenAndServe(":8080", mux)
 
