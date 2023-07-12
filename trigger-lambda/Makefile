@@ -1,4 +1,4 @@
 .PHONY: run
 run:
 	cd frontend && npm run build
-	go run ./main.go
+	. .env && export LAMBDA_RUNTIME_URL && go run ./main.go

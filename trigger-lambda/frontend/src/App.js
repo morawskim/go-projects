@@ -32,9 +32,30 @@ const OPTIONS = [
     },
 ]
 
+function AwsPayloadEvent(props) {
+    if (props.payload) {
+        return <>
+            <pre id="event-payload" className="mt-3">{props.payload}</pre>
+            <button onClick={event => {
+                fetch("/invoke", {
+                    method: "POST",
+                    "body": props.payload,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                })
+            }} className={"btn btn-primary"}>Invoke</button>
+        </>
+            ;
+    }
+
+    return <></>;
+}
+
 function App() {
     const [formData, setFormData] = React.useState({});
     const [eventName, setEventName] = React.useState('');
+    const [payload, setPayload] = React.useState('');
 
     return (
         <div className="container">
@@ -50,6 +71,7 @@ function App() {
                             onChange={(event) => {
                                 setEventName(event.value);
                                 setFormData({});
+                                setPayload('')
                             }}
                             options={OPTIONS} />
                     </div>
@@ -84,10 +106,10 @@ function App() {
 
                             json = json.replaceAll(`<<${k}>>`, formData[k]);
                         }
-                        document.getElementById('event-payload').innerHTML = JSON.stringify(JSON.parse(json), null, 2);
+                        setPayload(JSON.stringify(JSON.parse(json), null, 2))
                     }}>Generate event payload
                     </button>
-                    <pre id="event-payload" className="mt-3"></pre>
+                    <AwsPayloadEvent payload={payload}></AwsPayloadEvent>
                 </div>
             </div>
         </div>
