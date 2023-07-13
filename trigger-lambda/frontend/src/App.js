@@ -3,6 +3,7 @@ import React from 'react';
 import validator from '@rjsf/validator-ajv8';
 import Form from '@rjsf/core';
 import Select from 'react-select'
+import StepWizard from "react-step-wizard";
 
 const schema = {
     title: 'S3/PutObject',
@@ -56,6 +57,7 @@ function App() {
     const [formData, setFormData] = React.useState({});
     const [eventName, setEventName] = React.useState('');
     const [payload, setPayload] = React.useState('');
+    const [instance, setInstance] = React.useState(null);
 
     return (
         <div className="container">
@@ -63,53 +65,63 @@ function App() {
                 <div className="col">
                     <h1>Create AWS event payload</h1>
 
-                    <div className="mb-3">
-                        <label htmlFor="event" className="form-label">Email address</label>
-                        <Select
-                            defaultValue={OPTIONS[0]}
-                            id={"event"}
-                            onChange={(event) => {
-                                setEventName(event.value);
-                                setFormData({});
-                                setPayload('')
-                            }}
-                            options={OPTIONS} />
-                    </div>
+                    <StepWizard instance={setInstance}>
+                        <>
+                            <div className="mb-3">
+                                <label htmlFor="event" className="form-label">Email address</label>
+                                <Select
+                                    defaultValue={OPTIONS[0]}
+                                    id={"event"}
+                                    onChange={(event) => {
+                                        setEventName(event.value);
+                                        setFormData({});
+                                        setPayload('');
+                                        instance.nextStep();
+                                    }}
+                                    options={OPTIONS} />
+                            </div>
+                        </>
 
-                    <Form
-                        className={'mb-3'}
-                        schema={JsonSchemasForEvents[eventName] ?? {}}
-                        validator={validator}
-                        formData={formData}
-                        onChange={(e) => setFormData(e.formData)}
-                        uiSchema={{
-                            'ui:submitButtonOptions': {
-                                'norender': true,
-                            },
-                        }}
-                    />
+                        <>
+                            <Form
+                                className={'mb-3'}
+                                schema={JsonSchemasForEvents[eventName] ?? {}}
+                                validator={validator}
+                                formData={formData}
+                                onChange={(e) => setFormData(e.formData)}
+                                uiSchema={{
+                                    'ui:submitButtonOptions': {
+                                        'norender': true,
+                                    },
+                                }}
+                            />
+                            <button id="btnGenerate" type="button" className="btn btn-primary" onClick={event => {
+                                event.preventDefault();
+                                event.stopPropagation();
 
-                    <button id="btnGenerate" type="button" className="btn btn-primary" onClick={event => {
-                        event.preventDefault();
-                        event.stopPropagation();
+                                if (!TEMPLATES.hasOwnProperty(eventName)) {
+                                    return;
+                                }
 
-                        if (!TEMPLATES.hasOwnProperty(eventName)) {
-                            return;
-                        }
+                                let json = TEMPLATES[eventName];
 
-                        let json = TEMPLATES[eventName];
+                                for (let k in formData) {
+                                    if (!formData.hasOwnProperty(k)) {
+                                        continue;
+                                    }
 
-                        for (let k in formData) {
-                            if (!formData.hasOwnProperty(k)) {
-                                continue;
-                            }
+                                    json = json.replaceAll(`<<${k}>>`, formData[k]);
+                                }
+                                setPayload(JSON.stringify(JSON.parse(json), null, 2))
+                                instance.nextStep();
+                            }}>Generate event payload
+                            </button>
+                        </>
 
-                            json = json.replaceAll(`<<${k}>>`, formData[k]);
-                        }
-                        setPayload(JSON.stringify(JSON.parse(json), null, 2))
-                    }}>Generate event payload
-                    </button>
-                    <AwsPayloadEvent payload={payload}></AwsPayloadEvent>
+                        <>
+                            <AwsPayloadEvent payload={payload}></AwsPayloadEvent>
+                        </>
+                    </StepWizard>
                 </div>
             </div>
         </div>
