@@ -36,7 +36,6 @@ const OPTIONS = [
 function AwsPayloadEvent(props) {
     if (props.payload) {
         return <>
-            <pre id="event-payload" className="mt-3">{props.payload}</pre>
             <button onClick={event => {
                 fetch("/invoke", {
                     method: "POST",
@@ -45,7 +44,19 @@ function AwsPayloadEvent(props) {
                         "Content-Type": "application/json",
                     },
                 })
-            }} className={"btn btn-primary mb-3"}>Invoke</button>
+            }} className={"btn btn-primary mb-3"}>
+                Invoke
+            </button>
+            <pre
+                className="mt-3"
+                onClick={event => {
+                    let range = new Range();
+                    range.setStart(event.target, 0);
+                    range.setEnd(event.target, 1);
+                    document.getSelection().removeAllRanges();
+                    document.getSelection().addRange(range);
+                }}
+            >{props.payload}</pre>
         </>
             ;
     }
