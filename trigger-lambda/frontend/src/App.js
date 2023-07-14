@@ -45,13 +45,32 @@ function AwsPayloadEvent(props) {
                         "Content-Type": "application/json",
                     },
                 })
-            }} className={"btn btn-primary"}>Invoke</button>
+            }} className={"btn btn-primary mb-3"}>Invoke</button>
         </>
             ;
     }
 
     return <></>;
 }
+
+
+const Nav = (props) => {
+    const dots = [];
+    for (let i = 1; i <= props.totalSteps; i += 1) {
+        const isActive = props.currentStep === i;
+        dots.push((
+            <div
+                key={`step-${i}`}
+                className={`step ${isActive ? 'step__active' : ''}`}
+                onClick={() => props.goToStep(i)}
+            >{props.titles[i-1] ?? ''}</div>
+        ));
+    }
+
+    return (
+        <div className={'step-container mb-3'}>{dots}</div>
+    );
+};
 
 function App() {
     const [formData, setFormData] = React.useState({});
@@ -63,9 +82,9 @@ function App() {
         <div className="container">
             <div className="row">
                 <div className="col">
-                    <h1>Create AWS event payload</h1>
+                    <h1 className={'text-center'}>Create AWS event payload</h1>
 
-                    <StepWizard instance={setInstance}>
+                    <StepWizard instance={setInstance} nav={<Nav titles={['Select event', 'Event parameters', 'Payload']} />}>
                         <>
                             <div className="mb-3">
                                 <label htmlFor="event" className="form-label">Email address</label>
@@ -95,7 +114,7 @@ function App() {
                                     },
                                 }}
                             />
-                            <button id="btnGenerate" type="button" className="btn btn-primary" onClick={event => {
+                            <button id="btnGenerate" type="button" className="btn btn-primary mb-3" onClick={event => {
                                 event.preventDefault();
                                 event.stopPropagation();
 

@@ -1,0 +1,19 @@
+.step {
+    color: silver;
+    border-bottom: 4px solid silver;
+    flex-grow: 1;
+    text-align: center;
+    padding: 1rem 0;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.step.step__active {
+    color: black;
+    border-bottom: 4px solid var(--bs-blue);
+}
+
+.step-container {
+    display: flex;
+    justify-content: space-between;
+}
