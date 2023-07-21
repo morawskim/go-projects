@@ -15,6 +15,8 @@ const schema = {
     },
 };
 
+const formRef = React.createRef();
+
 const JsonSchemasForEvents = {
     's3/put-object': schema,
 }
@@ -118,6 +120,7 @@ function App() {
                                 schema={JsonSchemasForEvents[eventName] ?? {}}
                                 validator={validator}
                                 formData={formData}
+                                ref={formRef}
                                 onChange={(e) => setFormData(e.formData)}
                                 uiSchema={{
                                     'ui:submitButtonOptions': {
@@ -128,6 +131,10 @@ function App() {
                             <button id="btnGenerate" type="button" className="btn btn-primary mb-3" onClick={event => {
                                 event.preventDefault();
                                 event.stopPropagation();
+
+                                if (!formRef.current.validateForm()) {
+                                    return;
+                                }
 
                                 if (!TEMPLATES.hasOwnProperty(eventName)) {
                                     return;
