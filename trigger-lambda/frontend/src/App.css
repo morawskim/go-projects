@@ -10,7 +10,7 @@
 
 .step.step__active {
     color: black;
-    border-bottom: 4px solid var(--bs-blue);
+    border-bottom: 4px solid theme(colors.sky.600);;
 }
 
 .step-container {

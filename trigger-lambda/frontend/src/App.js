@@ -46,7 +46,7 @@ function AwsPayloadEvent(props) {
                         "Content-Type": "application/json",
                     },
                 })
-            }} className={"btn btn-primary mb-3"}>
+            }} className={"py-2 px-3 bg-sky-600 hover:bg-sky-800 text-white text-sm font-semibold rounded-md shadow focus:outline-none"}>
                 Invoke
             </button>
             <pre
@@ -92,10 +92,10 @@ function App() {
     const [instance, setInstance] = React.useState(null);
 
     return (
-        <div className="container">
-            <div className="row">
-                <div className="col">
-                    <h1 className={'text-center'}>Create AWS event payload</h1>
+        <div className="bg-slate-50 h-screen">
+            <div className="container mx-auto">
+                <div className="columns-1">
+                    <h1 className={'text-center text-3xl py-2'}>Create AWS event payload</h1>
 
                     <StepWizard instance={setInstance} nav={<Nav titles={['Select event', 'Event parameters', 'Payload']} />}>
                         <>
@@ -116,9 +116,10 @@ function App() {
 
                         <>
                             <Form
-                                className={'mb-3'}
+                                className={'mb-3 schema-form'}
                                 schema={JsonSchemasForEvents[eventName] ?? {}}
                                 validator={validator}
+                                showErrorList={false}
                                 formData={formData}
                                 ref={formRef}
                                 onChange={(e) => setFormData(e.formData)}
@@ -128,10 +129,9 @@ function App() {
                                     },
                                 }}
                             />
-                            <button id="btnGenerate" type="button" className="btn btn-primary mb-3" onClick={event => {
+                            <button id="btnGenerate" type="button" className="float-right py-2 px-3 bg-sky-600 hover:bg-sky-800 text-white text-sm font-semibold rounded-md shadow focus:outline-none" onClick={event => {
                                 event.preventDefault();
                                 event.stopPropagation();
-
                                 if (!formRef.current.validateForm()) {
                                     return;
                                 }
