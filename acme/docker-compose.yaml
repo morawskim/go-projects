@@ -1,0 +1,13 @@
+version: '3'
+services:
+  pebble:
+    image: letsencrypt/pebble
+    command: pebble -config /test/pebble-config.json
+    ports:
+      - 14000:14000  # ACME port
+      - 15000:15000  # Management port
+    environment:
+      - PEBBLE_VA_NOSLEEP=1
+    volumes:
+      - ./pebble-config.json:/test/pebble-config.json
+      - ./certs:/test/certs
