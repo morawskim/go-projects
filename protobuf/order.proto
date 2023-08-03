@@ -1,0 +1,28 @@
+syntax = "proto3";
+package demo;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "/pb";
+
+enum OrderStatus {
+    ORDER_STATUS_UNSPECIFIED = 0;
+    ORDER_STATUS_NEW = 1;
+    ORDER_STATUS_ACCEPTED = 2;
+    ORDER_STATUS_PAID = 3;
+    ORDER_STATUS_SENT = 4;
+    ORDER_STATUS_CANCALED = 5;
+}
+
+message OrderItem {
+    string sku = 1;
+    int32 quantity = 2;
+    int32 unitPrice = 3;
+}
+
+message Order {
+    string number = 1;
+    OrderStatus status = 2;
+    repeated OrderItem items = 3;
+    google.protobuf.Timestamp createdAt = 4;
+}
