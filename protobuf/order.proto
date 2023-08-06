@@ -4,6 +4,8 @@ package demo;
 import "google/protobuf/timestamp.proto";
 
 option go_package = "/pb";
+option php_namespace = "PB";
+option php_metadata_namespace = "PB\\Metadata";
 
 enum OrderStatus {
     ORDER_STATUS_UNSPECIFIED = 0;
