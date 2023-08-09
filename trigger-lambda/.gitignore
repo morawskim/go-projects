@@ -1,2 +1,4 @@
 /.idea/
 /.env
+/trigger-lambda-amd64
+/trigger-lambda-arm64
