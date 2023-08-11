@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"log"
@@ -19,6 +21,8 @@ type invokeResponse struct {
 	Msg string `json:"msg"`
 }
 
+var basePath = ""
+
 func main() {
 
 	//sdkConfig, err := config.LoadDefaultConfig(context.Background())
@@ -29,12 +33,19 @@ func main() {
 	//
 	//s3Client.ListO
 
+	flag.StringVar(&basePath, "base-path", "", "The URL prefix for all requests, relative to the host root.")
+	flag.Parse()
+
 	fsys := fs.FS(content)
 	html, _ := fs.Sub(fsys, "frontend/build")
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.FS(html)))
-	mux.HandleFunc("/invoke", func(w http.ResponseWriter, request *http.Request) {
+	mux.Handle("/", http.StripPrefix(basePath, &myFsHandler{
+		internalHandler: http.FileServer(http.FS(html)),
+		template:        template.Must(template.ParseFS(html, "index.html")),
+		basePath:        basePath,
+	}))
+	mux.HandleFunc(basePath+"/invoke", func(w http.ResponseWriter, request *http.Request) {
 		defer request.Body.Close()
 		payload, err := io.ReadAll(request.Body)
 		if err != nil {
@@ -72,8 +83,9 @@ func main() {
 
 		newRequest.Header.Set("Content-Type", "application/json; charset=UTF-8")
 		client := &http.Client{}
-		response, error := client.Do(newRequest)
-		if error != nil {
+		response, err := client.Do(newRequest)
+		if err != nil {
+			log.Println("Invoke Lambda error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(invokeResponse{Msg: "Unable to invoke a function"})
@@ -86,7 +98,7 @@ func main() {
 		w.Write(body)
 	})
 
-	fmt.Println("Listing....")
+	fmt.Println("Listing on port :8080")
 	err := http.ListenAndServe(":8080", mux)
 
 	if err != nil {

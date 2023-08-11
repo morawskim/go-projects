@@ -1,12 +1,14 @@
-.PHONY: run build publish
-run:
-	cd frontend && npm run build
-	. .env && export LAMBDA_RUNTIME_URL && go run ./main.go
+.PHONY: run build publish frontend
 
-build:
-	cd frontend && npm run build
-	GOOS=linux GOARCH=amd64 go build -o trigger-lambda-amd64 ./main.go
-	GOOS=linux GOARCH=arm64 go build -o trigger-lambda-arm64 ./main.go
+frotnend:
+	cd frontend && PUBLIC_URL='{{.BasePath}}' npm run build
+
+run: frotnend
+	. .env && export LAMBDA_RUNTIME_URL && go run ./
+
+build: frotnend
+	GOOS=linux GOARCH=amd64 go build -o trigger-lambda-amd64 ./
+	GOOS=linux GOARCH=arm64 go build -o trigger-lambda-arm64 ./
 
 publish: build
 	docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/morawskim/trigger-lambda:latest -t morawskim/trigger-lambda:latest . --push

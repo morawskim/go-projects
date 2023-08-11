@@ -39,7 +39,7 @@ function AwsPayloadEvent(props) {
     if (props.payload) {
         return <>
             <button onClick={event => {
-                fetch("/invoke", {
+                fetch(`${window.APP.BASE_PATH}/invoke`, {
                     method: "POST",
                     "body": props.payload,
                     headers: {
