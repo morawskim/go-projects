@@ -1,0 +1,101 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: demo-validation
+webhooks:
+  - name: "demo.example.com"
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [ "test-admission" ]
+    rules:
+      - operations: [ "CREATE"]
+        apiGroups: [ "" ]
+        apiVersions: [ "v1" ]
+        resources: [ "pods" ]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        name: admission-webhook-demo
+        path: "/validate"
+        port: 4443
+        namespace: admission-demo
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURUVENDQWpXZ0F3SUJBZ0lVU2RaWmpqenBHcjhJVWFKZWMvQ2laY0VtaDNrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd05ERXlNREFHQTFVRUF3d3BZV1J0YVhOemFXOXVMWGRsWW1odmIyc3RaR1Z0Ynk1aFpHMXBjM05wYjI0dApaR1Z0Ynk1emRtTXdIaGNOTWpNd09ERTFNRGcxT0RRNFdoY05Nak13T1RFME1EZzFPRFE0V2pBME1USXdNQVlEClZRUUREQ2xoWkcxcGMzTnBiMjR0ZDJWaWFHOXZheTFrWlcxdkxtRmtiV2x6YzJsdmJpMWtaVzF2TG5OMll6Q0MKQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFMczlraHc1R24zTkhHaE5hQVZqQ01rMwowTnU0ZXliWmtOVitGdnd5T085WDRxRDdHLzdBVk1jMXJGbmw1OGVSeXlJRkdCRFJjRWlpU01zYmZ4K3BtYStIClRzV1lQQjhmL0t1NFllWUdUU2JGZVdVOGVWM1FtcWkwMUdlVFBOcXlpaHN4TXFPRk5JVjBjSmlCVThVZ2p0azMKczBxRE1HMmFRa1hHalhxU1BlWDZHYlc2aFVNa3NvZmVOUGJwei9XblJVaHR2SVVpcG03YmtXblBBbXhwRGppbwpVczFHTmh3Q1g3a3UyOEMrL3F5Z1Y3dkFWT0lEcHRsWTZjZzMvN1o5YU9NcUNzSmhTcHluMmhHMm5OWU5CSU1nCjY1N3FOSVp5d2k2cHV5VnhxN2NGbFZTRTlkTERHV3hlSDVCOHhBWDUrRnhkTklFNkdnSTJ0TjdBUDFuWjdlY0MKQXdFQUFhTlhNRlV3TkFZRFZSMFJCQzB3SzRJcFlXUnRhWE56YVc5dUxYZGxZbWh2YjJzdFpHVnRieTVoWkcxcApjM05wYjI0dFpHVnRieTV6ZG1Nd0hRWURWUjBPQkJZRUZGOUx1b2VuV1lUaXdaTkI3QVQvbUZJK2hTYkNNQTBHCkNTcUdTSWIzRFFFQkN3VUFBNElCQVFDYVlBT1ZUSnIydGFacVMwamVVQU5nRGIvei9iQmNDMFljTmpaeWNWZ3kKaEJ4b2U3QmhzbFNMeVQxMkxkeXZCemVpWTZCRmtMZGlMWlN2bVdwck9iMmM0NURRekhvVVBYWjJPa0ZSVDdqbgo5MnZTYyszaHZ3V3lWcUJGUHhqQXBrYjZTajVXejlaSXdmZGszQUU0ekhGQ05GdE51Y0tQZkdSckt3S1ZBSUJkCjdiZm9JSTNPckhHcm5WNXRURFp3QTVkeEIxeWNpZ1NMRWcybkNQeC8zSUxubGUvVHI3ZTAxaDkrYjU2a1dMRVkKVlRxYXNLOVBzS3laemtiU3pwT0xMWnRpSUtrN1N5c0NEVzdBUVhRQ0djVy9YREtEbys0VHkzM3FjODBjb283VgpjSS9iL0llalk5ZlF3Sm1ac1BJRm13bGVZWXZGR2orQkYzNHFkOWI4a0hjYgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: admission-demo
+spec: {}
+status: {}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-admission
+spec: {}
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: admission-webhook-demo
+  name: admission-webhook-demo
+  namespace: admission-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admission-webhook-demo
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: admission-webhook-demo
+    spec:
+      containers:
+        - image: admission-webhook-demo
+          imagePullPolicy: Never
+          name: webhook
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+          resources: {}
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: admission-webhook-server-tls
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURUVENDQWpXZ0F3SUJBZ0lVU2RaWmpqenBHcjhJVWFKZWMvQ2laY0VtaDNrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd05ERXlNREFHQTFVRUF3d3BZV1J0YVhOemFXOXVMWGRsWW1odmIyc3RaR1Z0Ynk1aFpHMXBjM05wYjI0dApaR1Z0Ynk1emRtTXdIaGNOTWpNd09ERTFNRGcxT0RRNFdoY05Nak13T1RFME1EZzFPRFE0V2pBME1USXdNQVlEClZRUUREQ2xoWkcxcGMzTnBiMjR0ZDJWaWFHOXZheTFrWlcxdkxtRmtiV2x6YzJsdmJpMWtaVzF2TG5OMll6Q0MKQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFMczlraHc1R24zTkhHaE5hQVZqQ01rMwowTnU0ZXliWmtOVitGdnd5T085WDRxRDdHLzdBVk1jMXJGbmw1OGVSeXlJRkdCRFJjRWlpU01zYmZ4K3BtYStIClRzV1lQQjhmL0t1NFllWUdUU2JGZVdVOGVWM1FtcWkwMUdlVFBOcXlpaHN4TXFPRk5JVjBjSmlCVThVZ2p0azMKczBxRE1HMmFRa1hHalhxU1BlWDZHYlc2aFVNa3NvZmVOUGJwei9XblJVaHR2SVVpcG03YmtXblBBbXhwRGppbwpVczFHTmh3Q1g3a3UyOEMrL3F5Z1Y3dkFWT0lEcHRsWTZjZzMvN1o5YU9NcUNzSmhTcHluMmhHMm5OWU5CSU1nCjY1N3FOSVp5d2k2cHV5VnhxN2NGbFZTRTlkTERHV3hlSDVCOHhBWDUrRnhkTklFNkdnSTJ0TjdBUDFuWjdlY0MKQXdFQUFhTlhNRlV3TkFZRFZSMFJCQzB3SzRJcFlXUnRhWE56YVc5dUxYZGxZbWh2YjJzdFpHVnRieTVoWkcxcApjM05wYjI0dFpHVnRieTV6ZG1Nd0hRWURWUjBPQkJZRUZGOUx1b2VuV1lUaXdaTkI3QVQvbUZJK2hTYkNNQTBHCkNTcUdTSWIzRFFFQkN3VUFBNElCQVFDYVlBT1ZUSnIydGFacVMwamVVQU5nRGIvei9iQmNDMFljTmpaeWNWZ3kKaEJ4b2U3QmhzbFNMeVQxMkxkeXZCemVpWTZCRmtMZGlMWlN2bVdwck9iMmM0NURRekhvVVBYWjJPa0ZSVDdqbgo5MnZTYyszaHZ3V3lWcUJGUHhqQXBrYjZTajVXejlaSXdmZGszQUU0ekhGQ05GdE51Y0tQZkdSckt3S1ZBSUJkCjdiZm9JSTNPckhHcm5WNXRURFp3QTVkeEIxeWNpZ1NMRWcybkNQeC8zSUxubGUvVHI3ZTAxaDkrYjU2a1dMRVkKVlRxYXNLOVBzS3laemtiU3pwT0xMWnRpSUtrN1N5c0NEVzdBUVhRQ0djVy9YREtEbys0VHkzM3FjODBjb283VgpjSS9iL0llalk5ZlF3Sm1ac1BJRm13bGVZWXZGR2orQkYzNHFkOWI4a0hjYgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQzdQWkljT1JwOXpSeG8KVFdnRll3akpOOURidUhzbTJaRFZmaGI4TWpqdlYrS2creHYrd0ZUSE5heFo1ZWZIa2NzaUJSZ1EwWEJJb2tqTApHMzhmcVptdmgwN0ZtRHdmSC95cnVHSG1CazBteFhsbFBIbGQwSnFvdE5Sbmt6emFzb29iTVRLamhUU0ZkSENZCmdWUEZJSTdaTjdOS2d6QnRta0pGeG8xNmtqM2wraG0xdW9WREpMS0gzalQyNmMvMXAwVkliYnlGSXFadTI1RnAKendKc2FRNDRxRkxOUmpZY0FsKzVMdHZBdnY2c29GZTd3RlRpQTZiWldPbklOLysyZldqaktnckNZVXFjcDlvUgp0cHpXRFFTRElPdWU2alNHY3NJdXFic2xjYXUzQlpWVWhQWFN3eGxzWGgrUWZNUUYrZmhjWFRTQk9ob0NOclRlCndEOVoyZTNuQWdNQkFBRUNnZ0VBQTFKZStvdmVJY2ZodzgxR2F5ZGhTekNTVHFqc2htUHJEZDZPeWRWRTdVOXMKZ0lQejhJWmpwVS9EeWFuVktDcU4rcXlISU1WQkdMTnpBZEliRHo5b1dwVFdtNVYzME9yZ1cxWTB1Ny8yTThTTgpHQjZ2M2RvMWp0Mzd2QVZXQkdDUkovK3N4azgycWZ6RzErM0l4QUV2M09xcXVQSmEzdXc5cTJubEExSlUzQitXCm11NThKZEhxZEQ5aGhQQkFucEJWSExCMEJiVkFENHhaNklpeWQ3N1ByK0REbGpGZW10emdpTER1VDI1QUVJcDcKNVBOWG1wRTE5aWdlNWVYbmN5cUpBUnVIQjRRYmIxUHk5cGZPaFVSQmJOYll5WjJaZ3pmV3pkK0prYWpNL01iTQpCZzEyekdjd3p0aGxuUEVCVXJKR1dRMllVeGkyNGllb0JxaVU3elBzQVFLQmdRRHpGdFNDbllXU0RqQ1JVMkloCnl0a2UzT3p6M3UvSmRnZFNWOHgwRjVTcXJWUThzekJrUHdDR0U4YU13MXhVUWpRUlM2bWVBektHc1NIVDZYMTUKYWJESit4aW9QMHVycFByczhpbjRPUmpoQ3ZYMTc5SzAwTmw5QktYdWU5dFRvOENCSmpPSVVRaHpDaFRNR2dCUwpnVVV5eUtGOFNYK0paa0ZzWDI3M2V0QkxWd0tCZ1FERkwyUnptM3FwcitFMnBxbXZtaWZEUWxuZjlBS2UyZW1tCmdpdVZSNkZ1WnROU3p3TW1FYXYyODhPSm9ES2hTWkYydFlxT090SXUrYW82dGI2aHFTSURyclAvTXlDMjN5YU0KMjJxaTZLdzAxOUI1R3VWOUxrRldzZ05WeXg3Y3VBTzZjOXl3bmxyNGJsbjFoRXVCSk10dzRZdEUrNXd2R01HNApiWkdwK1VWbjhRS0JnUURKTTRoSlk5LytkOGd6UVBUa1MyVlNha0dseUV4b1QwellGdHVlNnpXZDMwRHR6TktzCjVvaWtjUkhSeUpGUEhFekVVLy9jVFlFd2dzUWhCZzFZeE9ZVEI4WHMzQmJoeHZmNXpxWjJVYXdKK0d5RVZ5L3IKZ1VIQ2ZHcHE3aEVuTlU1TWx6WG9Da29ZRGF3UkV5UlpKYTRFenBMNnNFcmppc056MDdtaEZRSDZtUUtCZ1FDUQo1dUxLa2RieUcyMUUyL1NXTnBKQnl1Q0EwcSthVEVpSE0rRVRNakJQRVFENk9XWDI4OFdMRkZiOUs5d0k2aWNiCk5RMDh0N3o5Q0Rzd0taNk03ZDB4RjVEdVdJUVIzcXBWbUdna2p4YjlQaHJVNUE4QWpwMDFPRnQ3RUdqOWlid3oKcUREbEdYbUFWcGVFOUZNSDlDSU1NYkpHWHgvRy9FcGZYU1ZONHdBK0FRS0JnQVlxaU5WSFEra21COEdieFMwbgpnYXFQZHNEVHl4NXJKMkorNEpwMFA2T09yU3pYZGUzSDJ6eE1ES1dkdHp0cnBKbjJBVDRZSUdqMkZjR1dPbnZPCkpnaXBlSWNSSGo0RHBwUERpemN1RlRoUCtaS3JHY0N2cVI5dlNtYVJpYVZ3VTQ5KzZjU2cyTTdtcFE1Z2NtUGoKamhhSmxoVkpFb3B2dk1uL1VGTnRXN1VlCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  name: admission-webhook-server-tls
+  namespace: admission-demo
+type: kubernetes.io/tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: admission-webhook-demo
+  name: admission-webhook-demo
+  namespace: admission-demo
+spec:
+  ports:
+    - port: 4443
+      protocol: TCP
+      targetPort: 4443
+  selector:
+    app: admission-webhook-demo
+status:
+  loadBalancer: {}
