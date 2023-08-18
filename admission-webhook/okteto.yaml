@@ -1,0 +1,22 @@
+namespace: admission-demo
+name: admission-webhook-demo
+image: okteto/golang:1
+command: bash
+
+metadata:
+  annotations:
+    fluxcd.io/ignore: "true"
+
+sync:
+  - .:/usr/src/app
+persistentVolume:
+  enabled: true
+volumes:
+  - /go
+
+securityContext:
+  capabilities:
+    add:
+      - SYS_PTRACE
+forward:
+  - 2345:2345

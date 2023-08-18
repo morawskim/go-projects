@@ -27,17 +27,15 @@ func main() {
 		defer r.Body.Close()
 
 		log.Println("request body", string(all))
-
 		admissionReview := admission.AdmissionReview{}
-		err = json.Unmarshal(all, &admissionReview)
-		if err != nil {
+
+		if err = json.Unmarshal(all, &admissionReview); err != nil {
 			log.Println("unmarshal error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		responseObj := admission.AdmissionResponse{Allowed: true, UID: admissionReview.Request.UID}
-
 		responseAdmissionReview := &admission.AdmissionReview{}
 		responseAdmissionReview.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "admission.k8s.io",
