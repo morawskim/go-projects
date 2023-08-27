@@ -6,6 +6,7 @@ command: bash
 metadata:
   annotations:
     fluxcd.io/ignore: "true"
+    kustomize.toolkit.fluxcd.io/reconcile: disabled
 
 sync:
   - .:/usr/src/app
