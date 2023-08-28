@@ -2,11 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	admission "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"log"
 	"net/http"
 )
@@ -14,25 +12,15 @@ import (
 func validateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Validating request")
 
-	body, err := io.ReadAll(r.Body)
+	admissionReview, err := extract(r.Body)
 	if err != nil {
-		log.Println("Cannot read request body", err)
-		http.Error(w, "Cannot read request body", http.StatusInternalServerError)
-		return
-	}
-	defer r.Body.Close()
-
-	//log.Println("request body", string(body))
-	admissionReview := admission.AdmissionReview{}
-	if err = json.Unmarshal(body, &admissionReview); err != nil {
-		log.Println("unmarshal request error", err)
-		http.Error(w, "Decode request body failed", http.StatusInternalServerError)
+		log.Println(err)
+		http.Error(w, "Cannot extract AdmissionReview from request", http.StatusBadRequest)
 		return
 	}
 
-	deploymentResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-	if admissionReview.Request.Resource != deploymentResource {
-		log.Printf("expect resource to be %s\n", deploymentResource)
+	if !isPodResource(admissionReview) {
+		log.Printf("expect resource to be pod, got %s\n", admissionReview.Request.Resource)
 		return
 	}
 
@@ -56,25 +44,6 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	responseAdmissionReview := &admission.AdmissionReview{}
-	responseAdmissionReview.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "admission.k8s.io",
-		Version: "v1",
-		Kind:    "AdmissionReview",
-	})
-	responseAdmissionReview.Response = &responseObj
-
-	log.Println("sending response", responseObj.Allowed, responseObj.UID)
-	respBytes, err := json.Marshal(responseAdmissionReview)
-
-	if err != nil {
-		log.Println("response marshal error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(respBytes); err != nil {
-		log.Println("response write error", err)
-	}
+	obj := createAdmissionReview(&responseObj)
+	sendResponse(w, obj)
 }
