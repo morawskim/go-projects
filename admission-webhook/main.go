@@ -13,6 +13,7 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/validate", validateHandler)
+	http.HandleFunc("/mutate", mutateHandler)
 
 	log.Println("Starting server on port 4443")
 	err := http.ListenAndServeTLS(":4443", tlsCert, tlsKey, nil)

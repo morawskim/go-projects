@@ -26,6 +26,34 @@ webhooks:
     sideEffects: None
     timeoutSeconds: 5
 ---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: demo-validation
+webhooks:
+  - name: "demo.example.com"
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [ "test-admission" ]
+    rules:
+      - operations: [ "CREATE"]
+        apiGroups: [ "" ]
+        apiVersions: [ "v1" ]
+        resources: [ "pods" ]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        name: admission-webhook-demo
+        path: "/mutate"
+        port: 4443
+        namespace: admission-demo
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURUVENDQWpXZ0F3SUJBZ0lVU2RaWmpqenBHcjhJVWFKZWMvQ2laY0VtaDNrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd05ERXlNREFHQTFVRUF3d3BZV1J0YVhOemFXOXVMWGRsWW1odmIyc3RaR1Z0Ynk1aFpHMXBjM05wYjI0dApaR1Z0Ynk1emRtTXdIaGNOTWpNd09ERTFNRGcxT0RRNFdoY05Nak13T1RFME1EZzFPRFE0V2pBME1USXdNQVlEClZRUUREQ2xoWkcxcGMzTnBiMjR0ZDJWaWFHOXZheTFrWlcxdkxtRmtiV2x6YzJsdmJpMWtaVzF2TG5OMll6Q0MKQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFMczlraHc1R24zTkhHaE5hQVZqQ01rMwowTnU0ZXliWmtOVitGdnd5T085WDRxRDdHLzdBVk1jMXJGbmw1OGVSeXlJRkdCRFJjRWlpU01zYmZ4K3BtYStIClRzV1lQQjhmL0t1NFllWUdUU2JGZVdVOGVWM1FtcWkwMUdlVFBOcXlpaHN4TXFPRk5JVjBjSmlCVThVZ2p0azMKczBxRE1HMmFRa1hHalhxU1BlWDZHYlc2aFVNa3NvZmVOUGJwei9XblJVaHR2SVVpcG03YmtXblBBbXhwRGppbwpVczFHTmh3Q1g3a3UyOEMrL3F5Z1Y3dkFWT0lEcHRsWTZjZzMvN1o5YU9NcUNzSmhTcHluMmhHMm5OWU5CSU1nCjY1N3FOSVp5d2k2cHV5VnhxN2NGbFZTRTlkTERHV3hlSDVCOHhBWDUrRnhkTklFNkdnSTJ0TjdBUDFuWjdlY0MKQXdFQUFhTlhNRlV3TkFZRFZSMFJCQzB3SzRJcFlXUnRhWE56YVc5dUxYZGxZbWh2YjJzdFpHVnRieTVoWkcxcApjM05wYjI0dFpHVnRieTV6ZG1Nd0hRWURWUjBPQkJZRUZGOUx1b2VuV1lUaXdaTkI3QVQvbUZJK2hTYkNNQTBHCkNTcUdTSWIzRFFFQkN3VUFBNElCQVFDYVlBT1ZUSnIydGFacVMwamVVQU5nRGIvei9iQmNDMFljTmpaeWNWZ3kKaEJ4b2U3QmhzbFNMeVQxMkxkeXZCemVpWTZCRmtMZGlMWlN2bVdwck9iMmM0NURRekhvVVBYWjJPa0ZSVDdqbgo5MnZTYyszaHZ3V3lWcUJGUHhqQXBrYjZTajVXejlaSXdmZGszQUU0ekhGQ05GdE51Y0tQZkdSckt3S1ZBSUJkCjdiZm9JSTNPckhHcm5WNXRURFp3QTVkeEIxeWNpZ1NMRWcybkNQeC8zSUxubGUvVHI3ZTAxaDkrYjU2a1dMRVkKVlRxYXNLOVBzS3laemtiU3pwT0xMWnRpSUtrN1N5c0NEVzdBUVhRQ0djVy9YREtEbys0VHkzM3FjODBjb283VgpjSS9iL0llalk5ZlF3Sm1ac1BJRm13bGVZWXZGR2orQkYzNHFkOWI4a0hjYgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+---
 apiVersion: v1
 kind: Namespace
 metadata:
