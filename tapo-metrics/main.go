@@ -39,23 +39,16 @@ func main() {
 
 	go func() {
 		ticker := time.NewTicker(10 * time.Second)
-
 		for {
 			select {
 			case <-ticker.C:
 				log.Println("Time to fetch metrics from tapo")
-				metrics, err := fetchDataFromTapo(t)
-
-				if err != nil {
-					log.Printf("Fetching metrics from tapo fail %q", err)
-				} else {
-					metricCurrentPower.Set(metrics.CurrentPower)
-					metricPowerEnergy.Set(metrics.TodayEnergy)
-				}
+				updateMetrics(metricCurrentPower, metricPowerEnergy, t)
 			}
 		}
 	}()
 
+	updateMetrics(metricCurrentPower, metricPowerEnergy, t)
 	err = http.ListenAndServe(":8080", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 
 	if err != nil {
@@ -81,4 +74,15 @@ func fetchDataFromTapo(tapo *tapo.Tapo) (TapoMetrics, error) {
 		CurrentPower: res["result"].(map[string]interface{})["current_power"].(float64),
 		TodayEnergy:  res["result"].(map[string]interface{})["today_energy"].(float64),
 	}, nil
+}
+
+func updateMetrics(metricCurrentPower, metricPowerEnergy prometheus.Gauge, t *tapo.Tapo) {
+	metrics, err := fetchDataFromTapo(t)
+
+	if err != nil {
+		log.Printf("fetching metrics from tapo fail - %q\n", err)
+	}
+
+	metricCurrentPower.Set(metrics.CurrentPower)
+	metricPowerEnergy.Set(metrics.TodayEnergy)
 }
