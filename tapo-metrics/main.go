@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
+	"flag"
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/richardjennings/tapo/pkg/tapo"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -16,7 +18,13 @@ type TapoMetrics struct {
 	TodayEnergy  float64
 }
 
+var logger *slog.Logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 func main() {
+	var interval time.Duration
+	flag.DurationVar(&interval, "interval", 60*time.Second, "")
+	flag.Parse()
+
 	metricCurrentPower := prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "app",
 		Name:      "current_power",
@@ -38,11 +46,12 @@ func main() {
 	}
 
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		// configure this value via command options default 60s
+		ticker := time.NewTicker(interval)
 		for {
 			select {
 			case <-ticker.C:
-				log.Println("Time to fetch metrics from tapo")
+				logger.Info("Time to fetch metrics from tapo")
 				updateMetrics(metricCurrentPower, metricPowerEnergy, t)
 			}
 		}
@@ -80,7 +89,7 @@ func updateMetrics(metricCurrentPower, metricPowerEnergy prometheus.Gauge, t *ta
 	metrics, err := fetchDataFromTapo(t)
 
 	if err != nil {
-		log.Printf("fetching metrics from tapo fail - %q\n", err)
+		logger.Error(fmt.Sprintf("fetching metrics from tapo fail - %q", err))
 	}
 
 	metricCurrentPower.Set(metrics.CurrentPower)
