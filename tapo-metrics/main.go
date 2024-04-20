@@ -51,7 +51,7 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				logger.Info("Time to fetch metrics from tapo")
+				logger.Debug("Time to fetch metrics from tapo")
 				updateMetrics(metricCurrentPower, metricPowerEnergy, t)
 			}
 		}
