@@ -27,7 +27,13 @@ func newCollyCollector(debugFlag bool) *colly.Collector {
 	httpClient := &http.Client{
 		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Ignore SSL certificate errors
+			TLSClientConfig: &tls.Config{
+				//InsecureSkipVerify: true, // Ignore SSL certificate errors
+				// fix issue with amazon
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				},
+			},
 		},
 	}
 	c.SetClient(httpClient)
@@ -55,8 +61,7 @@ func collect(products []item2, selectors map[string]selector, pr map[string]stri
 
 	c := newCollyCollector(false)
 	c.OnRequest(func(r *colly.Request) {
-		r.Headers.Set("Accept", "*/*")
-		r.Headers.Set("Accept-Encoding", "gzip")
+		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
 		r.Headers.Set("Host", r.URL.Host)
 		r.Ctx.Put("product", pr[r.URL.String()])
 	})
