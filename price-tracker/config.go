@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 )
@@ -44,7 +45,12 @@ func processConfig(c *config) ([]item2, map[string]string) {
 	prodUrlToProdNameMap := make(map[string]string, len(c.Products))
 
 	for _, i := range c.Products {
-		prodUrlToProdNameMap[i.Url] = i.Name
+		prodUrl, err := url.Parse(i.Url)
+		if err != nil {
+			panic(fmt.Sprintf("Url %s is not valid", i.Url))
+		}
+
+		prodUrlToProdNameMap[prodUrl.String()] = i.Name
 		productsToObserve = append(productsToObserve, item2{
 			productName: i.Name,
 			productUrl:  i.Url,
