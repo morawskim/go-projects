@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -28,7 +29,7 @@ func isValidFile(fileName string) bool {
 	// Use filepath.Abs to resolve any relative paths
 	absPath, err := filepath.Abs(fileName)
 	if err != nil {
-		fmt.Println("Error:", err)
+		slog.Default().Error(fmt.Sprintf("File %v is not valid file: %s", fileName, err))
 		return false
 	}
 

@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"log/slog"
 	"os"
 	"regexp"
 	"time"
@@ -49,14 +50,22 @@ func (expressionEnv) GetInputValue(el *colly.HTMLElement) string {
 }
 
 var onlyDigitsRegex = regexp.MustCompile(`[^0-9.,]+`)
-var visitedURLs = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+var priceMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "price_tracker",
 	Help: "Trace price of product",
+}, []string{"Product"})
+
+var productScraper = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "product_scraper",
+	Help: "Status of the scraping",
 }, []string{"Product"})
 
 func main() {
 	var cfgFile string
 	var interval time.Duration
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
+	slog.SetDefault(logger)
 
 	// Initialize a new Cobra command
 	var rootCmd = &cobra.Command{
@@ -83,17 +92,17 @@ func main() {
 			registerMetrics(pc)
 			go runPeriodically(interval, pc, i.Selectors, mapPr, ch)
 
-			fmt.Println("start http server")
+			slog.Default().Info("starting http server")
 			register()
 			close(ch)
 		},
 	}
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
-	rootCmd.PersistentFlags().DurationVar(&interval, "interval", 9*time.Hour, "interval")
+	rootCmd.PersistentFlags().DurationVar(&interval, "interval", 18*time.Hour, "interval")
 
 	// Execute the command
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		slog.Default().Error(err.Error())
 		os.Exit(1)
 	}
 }
@@ -108,7 +117,6 @@ func runPeriodically(interval time.Duration, products []item2, selectors map[str
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("pobieranie produktów")
 			collect(products, selectors, pr, ch)
 		}
 	}

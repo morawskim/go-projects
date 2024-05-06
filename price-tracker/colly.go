@@ -2,10 +2,10 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"github.com/expr-lang/expr"
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/debug"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,7 +25,7 @@ func newCollyCollector(debugFlag bool) *colly.Collector {
 	c := colly.NewCollector(opt...)
 
 	httpClient := &http.Client{
-		Timeout: 3 * time.Second,
+		Timeout: 5 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				//InsecureSkipVerify: true, // Ignore SSL certificate errors
@@ -57,8 +57,6 @@ func newCollyCollector(debugFlag bool) *colly.Collector {
 }
 
 func collect(products []item2, selectors map[string]selector, pr map[string]string, ch chan metric) {
-	data := make([]string, 0, len(products))
-
 	c := newCollyCollector(false)
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
@@ -66,12 +64,25 @@ func collect(products []item2, selectors map[string]selector, pr map[string]stri
 		r.Ctx.Put("product", pr[r.URL.String()])
 	})
 
+	c.OnError(func(r *colly.Response, err error) {
+		slog.Default().Error(
+			"Unable to fetch webpage",
+			slog.String("url", r.Request.URL.String()),
+			slog.Int("status", r.StatusCode),
+			slog.String("error", err.Error()),
+		)
+	})
+
 	for _, v := range selectors {
 		c.OnHTML(v.Selector, func(e *colly.HTMLElement) {
 			prodName, price := processHtmlElement(e, v.Expression)
 			f, err := strconv.ParseFloat(price, 64)
 			if err != nil {
-				fmt.Println("Error:", err)
+				slog.Default().Warn(
+					"Unable to parse price",
+					slog.String("product", prodName),
+					slog.String("price", price),
+				)
 				return
 			}
 
@@ -84,7 +95,6 @@ func collect(products []item2, selectors map[string]selector, pr map[string]stri
 	}
 
 	c.Wait()
-	fmt.Println(data)
 }
 
 func processHtmlElement(e *colly.HTMLElement, expression string) (string, string) {

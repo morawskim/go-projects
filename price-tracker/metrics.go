@@ -12,9 +12,10 @@ type metric struct {
 }
 
 func registerMetrics(items []item2) {
-	prometheus.MustRegister(visitedURLs)
+	prometheus.MustRegister(priceMetric)
+	prometheus.MustRegister(productScraper)
 	for _, i := range items {
-		visitedURLs.With(prometheus.Labels{"Product": i.productName}).Set(-1)
+		productScraper.With(prometheus.Labels{"Product": i.productName}).Set(0)
 	}
 }
 
@@ -23,7 +24,8 @@ func createChannel() chan metric {
 
 	go func() {
 		for m := range ch {
-			visitedURLs.With(prometheus.Labels{"Product": m.product}).Set(m.price)
+			priceMetric.With(prometheus.Labels{"Product": m.product}).Set(m.price)
+			productScraper.With(prometheus.Labels{"Product": m.product}).Set(1)
 		}
 	}()
 
