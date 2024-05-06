@@ -57,6 +57,9 @@ func newCollyCollector(debugFlag bool) *colly.Collector {
 }
 
 func collect(products []item2, selectors map[string]selector, pr map[string]string, ch chan metric) {
+	slog.Default().Info("Collect data")
+	updateLastScrapeMetric()
+
 	c := newCollyCollector(false)
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")

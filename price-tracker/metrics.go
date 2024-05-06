@@ -11,9 +11,29 @@ type metric struct {
 	price   float64
 }
 
+var priceMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "price_tracker",
+	Help: "Trace price of product",
+}, []string{"Product"})
+
+var productScraper = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "product_scraper",
+	Help: "Status of the scraping",
+}, []string{"Product"})
+
+var lastScrape = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "last_scrape_time_seconds",
+	Help: "Last scrape of prices",
+})
+
+func updateLastScrapeMetric() {
+	lastScrape.SetToCurrentTime()
+}
+
 func registerMetrics(items []item2) {
 	prometheus.MustRegister(priceMetric)
 	prometheus.MustRegister(productScraper)
+	prometheus.MustRegister(lastScrape)
 	for _, i := range items {
 		productScraper.With(prometheus.Labels{"Product": i.productName}).Set(0)
 	}

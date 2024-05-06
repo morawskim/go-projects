@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/gocolly/colly/v2"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"log/slog"
@@ -50,15 +49,6 @@ func (expressionEnv) GetInputValue(el *colly.HTMLElement) string {
 }
 
 var onlyDigitsRegex = regexp.MustCompile(`[^0-9.,]+`)
-var priceMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name: "price_tracker",
-	Help: "Trace price of product",
-}, []string{"Product"})
-
-var productScraper = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name: "product_scraper",
-	Help: "Status of the scraping",
-}, []string{"Product"})
 
 func main() {
 	var cfgFile string
