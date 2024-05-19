@@ -83,7 +83,7 @@ func main() {
 			go runPeriodically(interval, pc, i.Selectors, mapPr, ch)
 
 			slog.Default().Info("starting http server")
-			register()
+			register(pc)
 			close(ch)
 		},
 	}

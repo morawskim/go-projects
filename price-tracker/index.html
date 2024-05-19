@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status</title>
+</head>
+<body>
+<h1>Last Scrape {{.LastScrape}}</h1>
+<table>
+    <tbody>
+    <thead>
+    <tr>
+        <th>Product</th>
+        <th>Price</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    {{range .Products}}
+    <tr>
+        <td><a href="{{.Url}}">{{.Product}}</a></td>
+        <td>{{.Price}}</td>
+        <td>{{.Status}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+</body>
+</html>
