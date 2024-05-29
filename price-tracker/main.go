@@ -78,8 +78,9 @@ func main() {
 			cobra.CheckErr(err)
 			pc, mapPr := processConfig(&i)
 
-			ch := createChannel()
-			registerMetrics(pc)
+			collectorMinPrice := newMinPriceCollector()
+			ch := createChannel(collectorMinPrice)
+			registerMetrics(pc, collectorMinPrice)
 			go runPeriodically(interval, pc, i.Selectors, mapPr, ch)
 
 			slog.Default().Info("starting http server")

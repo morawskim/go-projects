@@ -39,22 +39,24 @@ func updateLastScrapeMetric() {
 	lastScrape.SetToCurrentTime()
 }
 
-func registerMetrics(items []item2) {
+func registerMetrics(items []item2, minPriceCollector *minPriceCollector) {
 	prometheus.MustRegister(priceMetric)
 	prometheus.MustRegister(productScraper)
 	prometheus.MustRegister(lastScrape)
 	for _, i := range items {
 		productScraper.With(prometheus.Labels{"Product": i.productName}).Set(0)
 	}
+	prometheus.MustRegister(minPriceCollector)
 }
 
-func createChannel() chan metric {
+func createChannel(minPriceCollector *minPriceCollector) chan metric {
 	ch := make(chan metric)
 
 	go func() {
 		for m := range ch {
 			priceMetric.With(prometheus.Labels{"Product": m.product}).Set(m.price)
 			productScraper.With(prometheus.Labels{"Product": m.product}).Set(1)
+			minPriceCollector.UpdateMinPrice(m.product, m.price)
 		}
 	}()
 
