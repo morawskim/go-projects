@@ -84,7 +84,7 @@ func main() {
 			go runPeriodically(interval, pc, i.Selectors, mapPr, ch)
 
 			slog.Default().Info("starting http server")
-			register(pc)
+			register(pc, collectorMinPrice)
 			close(ch)
 		},
 	}

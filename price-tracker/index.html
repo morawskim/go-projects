@@ -13,6 +13,7 @@
     <tr>
         <th>Product</th>
         <th>Price</th>
+        <th>Min price</th>
         <th>Status</th>
     </tr>
     </thead>
@@ -20,6 +21,7 @@
     <tr>
         <td><a href="{{.Url}}">{{.Product}}</a></td>
         <td>{{.Price}}</td>
+        <td>{{ if gt .MinPrice -1.0 }}{{.MinPrice}}{{end}}</td>
         <td>{{.Status}}</td>
     </tr>
     {{end}}

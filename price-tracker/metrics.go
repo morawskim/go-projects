@@ -64,13 +64,14 @@ func createChannel(minPriceCollector *minPriceCollector) chan metric {
 }
 
 type StatusItem struct {
-	Product string
-	Url     string
-	Price   float64
-	Status  int
+	Product  string
+	Url      string
+	Price    float64
+	MinPrice float64
+	Status   int
 }
 
-func register(products []item2) {
+func register(products []item2, minPriceCollector *minPriceCollector) {
 	t := template.Must(template.New("status").Parse(tmpl))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -100,11 +101,18 @@ func register(products []item2) {
 				continue
 			}
 
+			minPrice, ok := minPriceCollector.GetMinPrice(p.productName)
+
+			if !ok {
+				minPrice = -1
+			}
+
 			productStatus = append(productStatus, StatusItem{
-				Product: p.productName,
-				Url:     p.productUrl,
-				Price:   priceMetricValue,
-				Status:  int(scrapeMetricValue),
+				Product:  p.productName,
+				Url:      p.productUrl,
+				Price:    priceMetricValue,
+				MinPrice: minPrice,
+				Status:   int(scrapeMetricValue),
 			})
 		}
 

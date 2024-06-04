@@ -31,6 +31,12 @@ func (m *minPriceCollector) UpdateMinPrice(product string, price float64) {
 	}
 }
 
+func (m *minPriceCollector) GetMinPrice(product string) (float64, bool) {
+	price, ok := m.mapProductToPrice[product]
+
+	return price, ok
+}
+
 func newMinPriceCollector() *minPriceCollector {
 	return &minPriceCollector{
 		mapProductToPrice: make(map[string]float64),
