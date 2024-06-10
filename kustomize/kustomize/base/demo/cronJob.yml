@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: my-cronjob-to-suspend
+spec:
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 0
+  schedule: 05 01 * * *
+  jobTemplate:
+    metadata:
+      name: my-cronjob
+    spec:
+      backoffLimit: 0
+      completions: 1
+      template:
+        metadata:
+        spec:
+          restartPolicy: Never
+          containers:
+          - image: busybox
+            name: busybox
+            resources: {}
+            command:
+            - "/bin/bash"
+            - "-c"
+            - "date"
+status: {}
