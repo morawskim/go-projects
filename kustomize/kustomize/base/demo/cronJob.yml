@@ -25,3 +25,61 @@ spec:
             - "-c"
             - "date"
 status: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: my-cronjob-to-enable
+spec:
+  suspend: true
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 0
+  schedule: 05 02 * * *
+  jobTemplate:
+    metadata:
+      name: my-cronjob
+    spec:
+      backoffLimit: 0
+      completions: 1
+      template:
+        metadata:
+        spec:
+          restartPolicy: Never
+          containers:
+            - image: busybox
+              name: busybox
+              resources: {}
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "date"
+status: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cronjob-dont-touch-default-suspend
+spec:
+  suspend: true
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 0
+  schedule: 05 03 * * *
+  jobTemplate:
+    metadata:
+      name: my-cronjob
+    spec:
+      backoffLimit: 0
+      completions: 1
+      template:
+        metadata:
+        spec:
+          restartPolicy: Never
+          containers:
+            - image: busybox
+              name: busybox
+              resources: {}
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "date"
+status: {}

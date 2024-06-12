@@ -17,3 +17,8 @@ transformers:
       config.kubernetes.io/function: |
         exec:
           path: ./../../plugins/mykrmplugin
+  spec:
+    cronJobsToDisable:
+      - my-cronjob-to-suspend
+    cronJobsToEnable:
+      - my-cronjob-to-enable
