@@ -1,0 +1,144 @@
+apiVersion: config.kubernetes.io/v1
+kind: ResourceList
+items:
+  - apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      annotations:
+        internal.config.kubernetes.io/previousKinds: CronJob
+        internal.config.kubernetes.io/previousNames: my-cronjob-to-suspend
+        internal.config.kubernetes.io/previousNamespaces: default
+        kustomize.config.k8s.io/id: |
+          group: batch
+          kind: CronJob
+          name: my-cronjob-to-suspend
+          namespace: kustomize-plugin
+          version: v1
+        config.kubernetes.io/index: '0'
+        internal.config.kubernetes.io/index: '0'
+        internal.config.kubernetes.io/annotations-migration-resource-id: '0'
+        internal.config.kubernetes.io/id: '1'
+        config.k8s.io/id: '1'
+      name: my-cronjob-to-suspend
+      namespace: kustomize-plugin
+    spec:
+      failedJobsHistoryLimit: 1
+      jobTemplate:
+        metadata:
+          name: my-cronjob
+        spec:
+          backoffLimit: 0
+          completions: 1
+          template:
+            metadata: null
+            spec:
+              containers:
+                - command:
+                    - /bin/bash
+                    - -c
+                    - date
+                  image: busybox
+                  name: busybox
+                  resources: {}
+              restartPolicy: Never
+      schedule: 05 01 * * *
+      successfulJobsHistoryLimit: 0
+    status: {}
+  - apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      annotations:
+        internal.config.kubernetes.io/previousKinds: CronJob
+        internal.config.kubernetes.io/previousNames: my-cronjob-to-enable
+        internal.config.kubernetes.io/previousNamespaces: default
+        kustomize.config.k8s.io/id: |
+          group: batch
+          kind: CronJob
+          name: my-cronjob-to-enable
+          namespace: kustomize-plugin
+          version: v1
+        config.kubernetes.io/index: '1'
+        internal.config.kubernetes.io/index: '1'
+        internal.config.kubernetes.io/annotations-migration-resource-id: '1'
+        internal.config.kubernetes.io/id: '2'
+        config.k8s.io/id: '2'
+      name: my-cronjob-to-enable
+      namespace: kustomize-plugin
+    spec:
+      failedJobsHistoryLimit: 1
+      jobTemplate:
+        metadata:
+          name: my-cronjob
+        spec:
+          backoffLimit: 0
+          completions: 1
+          template:
+            metadata: null
+            spec:
+              containers:
+                - command:
+                    - /bin/bash
+                    - -c
+                    - date
+                  image: busybox
+                  name: busybox
+                  resources: {}
+              restartPolicy: Never
+      schedule: 05 02 * * *
+      successfulJobsHistoryLimit: 0
+      suspend: true
+    status: {}
+  - apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      annotations:
+        internal.config.kubernetes.io/previousKinds: CronJob
+        internal.config.kubernetes.io/previousNames: cronjob-dont-touch-default-suspend
+        internal.config.kubernetes.io/previousNamespaces: default
+        kustomize.config.k8s.io/id: |
+          group: batch
+          kind: CronJob
+          name: cronjob-dont-touch-default-suspend
+          namespace: kustomize-plugin
+          version: v1
+        config.kubernetes.io/index: '2'
+        internal.config.kubernetes.io/index: '2'
+        internal.config.kubernetes.io/annotations-migration-resource-id: '2'
+        internal.config.kubernetes.io/id: '3'
+        config.k8s.io/id: '3'
+      name: cronjob-dont-touch-default-suspend
+      namespace: kustomize-plugin
+    spec:
+      failedJobsHistoryLimit: 1
+      jobTemplate:
+        metadata:
+          name: my-cronjob
+        spec:
+          backoffLimit: 0
+          completions: 1
+          template:
+            metadata: null
+            spec:
+              containers:
+                - command:
+                    - /bin/bash
+                    - -c
+                    - date
+                  image: busybox
+                  name: busybox
+                  resources: {}
+              restartPolicy: Never
+      schedule: 05 03 * * *
+      successfulJobsHistoryLimit: 0
+      suspend: true
+    status: {}
+functionConfig:
+  apiVersion: demo.morawskim.pl/v1beta
+  kind: MyKRMKustomizationPlugin
+  metadata:
+    annotations:
+      config.kubernetes.io/function: |
+        exec:
+          path: ./../../plugins/mykrmplugin
+      config.kubernetes.io/local-config: 'true'
+    name: krmFunction
