@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"reflect"
 	"sigs.k8s.io/kustomize/kyaml/kio"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 	"strings"
 	"testing"
 )
@@ -120,6 +123,62 @@ func Test_extractCronJobsToDisableAndEnable(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("extractCronJobsToDisableAndEnable() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_createFilterFunction(t *testing.T) {
+	type args struct {
+		yamlFilePath           string
+		expectedResultFilePath string
+	}
+	tests := []struct {
+		name string
+		args args
+		want func(nodes []*yaml.RNode) ([]*yaml.RNode, error)
+	}{
+		{
+			name: "test enable or disable cronJobs based on plugin configuration",
+			args: args{
+				yamlFilePath:           "./tests/plugin-configuration-full.yml",
+				expectedResultFilePath: "./tests/expected-result.yml",
+			},
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := kio.ByteReader{
+				Reader: strings.NewReader(mustGetYamlFileContent(tt.args.yamlFilePath)),
+			}
+
+			callback := createFilterFunction(&reader)
+			nodes, err := reader.Read()
+
+			if err != nil {
+				t.Errorf("cannot read a yaml file with ResourceList error = %v", err)
+			}
+
+			got, _ := callback(nodes)
+			buf := bytes.NewBufferString("")
+			writer := kio.ByteWriter{Writer: buf}
+			if err := writer.Write(got); err != nil {
+				t.Errorf("cannot write a yaml file error = %v", err)
+			}
+
+			generatedYamlContent, err := io.ReadAll(buf)
+			if err != nil {
+				t.Errorf("cannot read a buffer")
+			}
+			expectedResult, err := os.ReadFile(tt.args.expectedResultFilePath)
+			if err != nil {
+				t.Errorf("cannot read a expectedResult yaml file error = %v", err)
+			}
+
+			if string(generatedYamlContent) != string(expectedResult) {
+				t.Errorf("The generated yaml file does not match the expected result")
 			}
 		})
 	}

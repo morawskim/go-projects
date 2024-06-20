@@ -14,39 +14,7 @@ func main() {
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{kipReader},
 		Filters: []kio.Filter{
-			kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
-				cronJobsToDisable, cronJobsToEnable, err := extractCronJobsToDisableAndEnable(kipReader.FunctionConfig)
-				if err != nil {
-					return nil, err
-				}
-
-				filters := make([]yaml.Filter, 3)
-				filters = []yaml.Filter{
-					yaml.Tee(yaml.SetAnnotation("foo", "bar")),
-					yaml.Lookup("spec"),
-					nil,
-				}
-
-				for i := range nodes {
-					resource := nodes[i]
-
-					if "CronJob" == resource.GetKind() && "batch/v1" == resource.GetApiVersion() {
-						var err error = nil
-						if contains(cronJobsToDisable, resource.GetName()) {
-							filters[2] = yaml.Tee(yaml.SetField("suspend", yaml.MustParse("true")))
-							err = resource.PipeE(filters...)
-						} else if contains(cronJobsToEnable, resource.GetName()) {
-							filters[2] = yaml.Tee(yaml.SetField("suspend", yaml.MustParse("false")))
-							err = resource.PipeE(filters...)
-						}
-
-						if err != nil {
-							return nil, err
-						}
-					}
-				}
-				return nodes, nil
-			}),
+			kio.FilterFunc(createFilterFunction(kipReader)),
 		},
 		Outputs:               []kio.Writer{kio.ByteWriter{Writer: os.Stdout}},
 		ContinueOnEmptyResult: false,
@@ -54,6 +22,42 @@ func main() {
 
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func createFilterFunction(kipReader *kio.ByteReader) func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
+	return func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
+		cronJobsToDisable, cronJobsToEnable, err := extractCronJobsToDisableAndEnable(kipReader.FunctionConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		filters := make([]yaml.Filter, 3)
+		filters = []yaml.Filter{
+			yaml.Tee(yaml.SetAnnotation("foo", "bar")),
+			yaml.Lookup("spec"),
+			nil,
+		}
+
+		for i := range nodes {
+			resource := nodes[i]
+
+			if "CronJob" == resource.GetKind() && "batch/v1" == resource.GetApiVersion() {
+				var err error = nil
+				if contains(cronJobsToDisable, resource.GetName()) {
+					filters[2] = yaml.Tee(yaml.SetField("suspend", yaml.MustParse("true")))
+					err = resource.PipeE(filters...)
+				} else if contains(cronJobsToEnable, resource.GetName()) {
+					filters[2] = yaml.Tee(yaml.SetField("suspend", yaml.MustParse("false")))
+					err = resource.PipeE(filters...)
+				}
+
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		return nodes, nil
 	}
 }
 
@@ -71,7 +75,7 @@ func extractCronJobsToDisableAndEnable(y *yaml.RNode) ([]string, []string, error
 		}
 
 		if _, ok := value.([]interface{}); !ok {
-			return nil, fmt.Errorf("expected slice for path %q, got %T", path, value)
+			return nil, fmt.Errorf("expected []string for path %q, got %T", path, value)
 		}
 
 		slice := make([]string, 0, len(value.([]interface{})))

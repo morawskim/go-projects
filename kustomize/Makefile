@@ -1,4 +1,4 @@
-.PHONY: kustomize build kubectl-apply list-cron-jobs
+.PHONY: kustomize build kubectl-apply list-cron-jobs tests
 
 build:
 	CGO_ENABLED=0 go build -o kustomize/plugins/mykrmplugin krm.go
@@ -13,3 +13,6 @@ kubectl-apply:
 
 list-cron-jobs:
 	kubectl get cj -n kustomize-plugin
+
+tests:
+	go test -v ./...
