@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Games</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Prevent scrolling while dialog is open */
+        body:has(dialog[data-dialog-target='dialog'][open]) {
+            overflow: hidden;
+        }
+
+        /* Customize the dialog backdrop */
+        dialog {
+            box-shadow: 0 0 0 100vw rgb(0 0 0 / 0.5);
+            margin: 50vh auto 0;
+            padding: 3rem;
+        }
+
+        @keyframes fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fade-out {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        /* Add animations */
+        dialog[data-dialog-target='dialog'][open] {
+            animation: fade-in 200ms forwards;
+        }
+
+        dialog[data-dialog-target='dialog'][closing] {
+            animation: fade-out 200ms forwards;
+        }
+    </style>
+    <link href="https://unpkg.com/tabulator-tables/dist/css/tabulator.min.css" rel="stylesheet">
+    <script src=" https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js "></script>
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables/dist/js/tabulator.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "@hotwired/stimulus": "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import { Application, Controller } from 'https://unpkg.com/@hotwired/stimulus/dist/stimulus.js'
+        import Dialog from 'https://unpkg.com/@stimulus-components/dialog@1.0.1/dist/stimulus-dialog.mjs'
+
+        window.Stimulus = Application.start()
+
+        async function generateKey(passphrase) {
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(passphrase);
+
+            const paddedKeyData = new Uint8Array(32); // 32 bytes for AES-256
+            paddedKeyData.set(keyData);
+
+            return await window.crypto.subtle.importKey(
+                'raw',
+                paddedKeyData,
+                {
+                    name: 'AES-CBC',
+                    length: 256
+                },
+                true,
+                ['decrypt']
+            )
+        }
+
+        async function decryptData(key, encryptedData, iv) {
+            const decryptedData = await window.crypto.subtle.decrypt(
+                {
+                    name: 'AES-CBC',
+                    iv: iv,
+                    length: 256,
+                },
+                key,
+                encryptedData
+            );
+            return new TextDecoder().decode(decryptedData);
+        }
+
+        async function processEncryptedData({ iv: ivBase64, encrypted, columns }, passphrase) {
+            const key = await generateKey(passphrase);
+            const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+            const data = await decryptData(
+                key,
+                Uint8Array.from(atob(encrypted), c => c.charCodeAt(0)),
+                iv
+            );
+
+            return [columns, JSON.parse(data)];
+        }
+
+        Stimulus.register('app', class extends Dialog {
+            static targets = ['input'];
+            resolveCallback = null;
+
+            connect() {
+                super.connect();
+                this.promise = Promise.all([
+                    fetch('./file.json.encrypted').then((r) => r.json()),
+                    new Promise((resolve, reject) => {
+                        this.resolveCallback = resolve;
+                    }),
+                ]).then(async ([responseWithEncryptedData, passphrase]) => {
+
+                    return await processEncryptedData(responseWithEncryptedData, passphrase);
+                }).then(data => {
+                    this.dispatch('tabulator-data', { prefix: 'app', detail: { data: data } });
+                });
+            }
+
+            setPassphrase() {
+                const passphrase = this.inputTarget?.value;
+                this.inputTarget.value = '';
+                this.dialogTarget.close();
+                this.resolveCallback(passphrase);
+            }
+        });
+
+        Stimulus.register('tabulator', class extends Controller {
+            static targets = ['tabulator'];
+
+            setData(event) {
+                Promise.resolve(event.detail.data)
+                    .then(([columns, data]) => {
+                        return [
+                            columns,
+                            data.map(([platform, game, date]) => {
+                                return {
+                                    platform: platform,
+                                    game: game,
+                                    date: date
+                                };
+                            })
+                        ];
+                    }).then(([columns, data]) => {
+                        const table = new Tabulator(this.tabulatorTarget, {
+                            height: '100dvh',
+                            layout: 'fitColumns',
+                            data: data,
+                            columns: columns,
+                            footerElement: '<span>Showing <span id="searchCount"></span> results out of <span id="totalCount"></span></span>',
+                        });
+                        table.on('dataLoaded', function (data) {
+                            document.getElementById('totalCount').textContent = (data.length);
+                        });
+                        table.on('dataFiltered', function (filters, rows) {
+                            document.getElementById('searchCount').textContent = (rows.length);
+                        });
+                });
+            }
+        });
+    </script>
+</head>
+<body>
+
+
+
+<div data-controller="tabulator" data-action="app:tabulator-data@window->tabulator#setData">
+    <div data-tabulator-target="tabulator"></div>
+</div>
+
+<div data-controller="app" data-action="click->app#backdropClose" data-app-open-value="true">
+    <dialog data-app-target="dialog">
+        <label for="txtPassword">Passphrase</label>
+        <input data-app-target="input" id="txtPassword" type="password" name="password" data-action="keydown.enter->app#setPassphrase">
+
+        <button type="button" data-action="app#setPassphrase" autofocus>OK</button>
+    </dialog>
+</div>
+
+</body>
+</html>
