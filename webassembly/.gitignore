@@ -1,0 +1,4 @@
+/.idea/
+assets/functions.wasm
+assets/wasm_exec.js
+/server
