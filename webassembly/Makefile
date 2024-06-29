@@ -7,5 +7,5 @@ build-wasm:
 build-server:
 	go build -o server ./cmd/server
 
-run:
+run: build-wasm
 	go run ./cmd/server/main.go

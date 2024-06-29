@@ -3,12 +3,46 @@
 <head>
     <meta charset="utf-8"/>
     <script src="wasm_exec.js"></script>
-    <script>
-        const go = new Go();
-        WebAssembly.instantiateStreaming(fetch('functions.wasm'), go.importObject).then((result) => {
-            go.run(result.instance);
-        });
-    </script>
+    <style>
+        .image {
+            border: 2px solid red;
+        }
+    </style>
 </head>
-<body></body>
+<body>
+
+<h2>Image demo</h2>
+<input type="file" id="uploader" />
+<div>
+    <img alt="sourceImg" id="sourceImg" class="image" />
+    <img alt="thumbnailImg" id="thumbnailImg" class="image" />
+</div>
+
+<script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch('functions.wasm'), go.importObject).then((result) => {
+        go.run(result.instance);
+    });
+
+    document.getElementById('uploader').addEventListener('change', function() {
+        let reader = new FileReader();
+        const imageType = this.files[0].type;
+
+        reader.onload = (ev) => {
+            const bytes = new Uint8Array(ev.target.result);
+            // this function is defined by golang
+            loadImage(bytes);
+            let blob = new Blob([bytes], {'type': imageType});
+            document.getElementById("sourceImg").src = URL.createObjectURL(blob);
+        };
+        reader.readAsArrayBuffer(this.files[0]);
+    });
+
+    // this function is called by golang
+    function displayThumbnail(buf) {
+        const blob = new Blob([buf], {'type': 'jpeg'});
+        document.getElementById('thumbnailImg').src = URL.createObjectURL(blob);
+    }
+</script>
+</body>
 </html>

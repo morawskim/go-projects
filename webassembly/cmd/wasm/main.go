@@ -8,7 +8,11 @@ import (
 
 func main() {
 	fmt.Println("Hello World from Webassembly")
+	imgResizer := newImageResizer()
+	imgResizer.setupOnLoadCb()
+
 	js.Global().Set("base64Encode", wrapperForBase64())
+	js.Global().Set("loadImage", imgResizer.onImgLoadCb)
 
 	//otherwise we get error "Go program has already exited" in web browser
 	select {}
