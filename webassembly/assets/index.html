@@ -11,6 +11,22 @@
 </head>
 <body>
 
+<h2>Base64 demo</h2>
+<div style="display: flex; flex-direction: column">
+    <label>
+        Text to encode
+        <textarea id="textToEncode"></textarea>
+        <button id="btnEncodeText">Encode</button>
+    </label>
+
+    <label>
+        Result
+        <textarea readonly id="base64EncodedTex"></textarea>
+    </label>
+</div>
+
+
+
 <h2>Image demo</h2>
 <input type="file" id="uploader" />
 <div>
@@ -23,6 +39,13 @@
     WebAssembly.instantiateStreaming(fetch('functions.wasm'), go.importObject).then((result) => {
         go.run(result.instance);
     });
+
+    document.getElementById('btnEncodeText').addEventListener('click', (e) => {
+        const val = document.getElementById('textToEncode').value;
+        const encodedText = base64Encode(val);
+        document.getElementById('base64EncodedTex').value = JSON.stringify(encodedText);
+        console.log('text has been encoded');
+    })
 
     document.getElementById('uploader').addEventListener('change', function() {
         let reader = new FileReader();
