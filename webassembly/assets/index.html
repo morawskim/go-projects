@@ -34,6 +34,12 @@
     <img alt="thumbnailImg" id="thumbnailImg" class="image" />
 </div>
 
+<h2>Fetch</h2>
+<input type="text" id="urlTxt" value="https://jsonplaceholder.typicode.com/posts">
+<button id="btnFetch">Fetch</button>
+Response body:
+<pre id="responseBody"></pre>
+
 <script>
     const go = new Go();
     WebAssembly.instantiateStreaming(fetch('functions.wasm'), go.importObject).then((result) => {
@@ -59,6 +65,13 @@
             document.getElementById("sourceImg").src = URL.createObjectURL(blob);
         };
         reader.readAsArrayBuffer(this.files[0]);
+    });
+
+    document.getElementById('btnFetch').addEventListener('click', function () {
+        const url = document.getElementById('urlTxt').value;
+        goFetch(url)
+            .then(body => document.getElementById('responseBody').innerText = body)
+            .catch(msg => alert(msg))
     });
 
     // this function is called by golang

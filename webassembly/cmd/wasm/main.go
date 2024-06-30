@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
+	"net/http"
 	"syscall/js"
 )
 
@@ -13,6 +15,39 @@ func main() {
 
 	js.Global().Set("base64Encode", wrapperForBase64())
 	js.Global().Set("loadImage", imgResizer.onImgLoadCb)
+
+	// see https://github.com/golang/go/issues/41310
+	js.Global().Set("goFetch", js.FuncOf(func(this js.Value, args []js.Value) any {
+		url := args[0].String()
+
+		handler := js.FuncOf(func(this js.Value, args []js.Value) any {
+			resolve := args[0]
+			reject := args[1]
+
+			go func() {
+				r, err := http.Get(url)
+				if err != nil {
+					reject.Invoke(fmt.Sprintf("cannot send request: %s", err.Error()))
+					return
+				}
+
+				defer r.Body.Close()
+				body, err := io.ReadAll(r.Body)
+
+				if err != nil {
+					reject.Invoke(fmt.Sprintf("cannot read body: %s", err.Error()))
+					return
+				}
+
+				resolve.Invoke(string(body))
+			}()
+
+			return nil
+		})
+		// Create and return the Promise
+		promiseConstructor := js.Global().Get("Promise")
+		return promiseConstructor.New(handler)
+	}))
 
 	//otherwise we get error "Go program has already exited" in web browser
 	select {}
