@@ -5,7 +5,10 @@ import (
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"time"
@@ -66,14 +69,8 @@ func main() {
 				cobra.CheckErr(fmt.Errorf("no config file specified"))
 			}
 
-			if !isValidFile(cfgFile) {
-				cobra.CheckErr(fmt.Errorf(`config file "%s" not exists`, cfgFile))
-			}
-
 			i := config{}
-			b, err := os.ReadFile(cfgFile)
-			cobra.CheckErr(err)
-
+			b, err := loadConfigFile(cfgFile)
 			err = yaml.Unmarshal(b, &i)
 			cobra.CheckErr(err)
 			pc, mapPr := processConfig(&i)
@@ -111,4 +108,25 @@ func runPeriodically(interval time.Duration, products []item2, selectors map[str
 			collect(products, selectors, pr, ch)
 		}
 	}
+}
+
+func loadConfigFile(cfgFile string) ([]byte, error) {
+	u, err := url.Parse(cfgFile)
+
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		response, err := http.Get(cfgFile)
+		if err != nil {
+			return nil, err
+		}
+
+		defer response.Body.Close()
+
+		return io.ReadAll(response.Body)
+	}
+
+	if !isValidFile(cfgFile) {
+		cobra.CheckErr(fmt.Errorf(`config file "%s" not exists`, cfgFile))
+	}
+
+	return os.ReadFile(cfgFile)
 }
