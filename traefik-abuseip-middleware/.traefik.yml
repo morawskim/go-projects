@@ -1,0 +1,9 @@
+displayName: AbuseIP
+type: middleware
+
+import: github.com/morawskim/go-projects/traefik-abuseip-middleware
+
+summary: '[Example] AbuseIP'
+
+testData:
+  foo: bar

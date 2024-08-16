@@ -1,0 +1,24 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --log.level=DEBUG
+      - --accesslog
+      - --experimental.localPlugins.abuseip.moduleName=github.com/morawskim/go-projects/traefik-abuseip-middleware
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/plugins-local/src/github.com/morawskim/go-projects/traefik-abuseip-middleware
+    tty: true
+  whoami:
+    image: traefik/whoami # https://github.com/traefik/whoami
+    command: >-
+      -name whoami -verbose true
+    labels:
+      traefik.http.routers.whoami.rule: Host(`whoami.lvh.me`)
+      traefik.http.routers.whoami.middlewares: abuse
+      traefik.http.middlewares.abuse.plugin.abuseip.foo: 3h
