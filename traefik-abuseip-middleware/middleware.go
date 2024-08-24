@@ -51,6 +51,8 @@ func (e *AbuseIp) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	host, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		os.Stderr.WriteString("error parsing remote address: " + req.RemoteAddr + "\n")
+		e.next.ServeHTTP(rw, req)
+		return
 	}
 
 	if _, exists := e.abuseIps[host]; exists {

@@ -1,0 +1,13 @@
+#
+# Aggregated Blocklist for AbuseIPDB: A list of the most reported IP addresses.
+#
+# Last updated:        2024-08-24 08:48:43 UTC
+# Confidence level:    ~100%
+# Filename:            abuseipdb-s100-7d.ipv4
+# Number of ips:       2
+#
+# Source:              https://github.com/borestad/blocklist-abuseipdb
+# Credits:             https://www.abuseipdb.com - please support them!
+#
+1.1.2.2
+1.1.3.3
