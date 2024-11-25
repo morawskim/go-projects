@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 )
@@ -30,6 +33,14 @@ func main() {
 	httpClient := &http.Client{Timeout: requestTimeout + 10*time.Second}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
+
+	httpAddr := flag.String("addr", "localhost:8080", "http listen address")
+	flag.Parse()
+
+	server := &http.Server{
+		Addr:    *httpAddr,
+		Handler: http.DefaultServeMux,
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		flusher, isFlusher := w.(http.Flusher)
@@ -103,7 +114,29 @@ func main() {
 		}
 	})
 
-	http.ListenAndServe("localhost:8080", http.DefaultServeMux)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	go func() {
+		slog.Info(fmt.Sprintf("Starting server on %s", *httpAddr))
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("Server error: %v", err)
+		}
+	}()
+
+	// Block until the context is canceled (signal received)
+	<-ctx.Done()
+	slog.Info("Shutting down server...")
+
+	// Create a timeout context for the shutdown process
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		slog.Warn("Server forced to shut down: %v", err)
+	} else {
+		slog.Info("Server stopped gracefully.")
+	}
 }
 
 func buildErrorResponse(err error) errorResponse {
