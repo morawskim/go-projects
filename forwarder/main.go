@@ -22,6 +22,11 @@ type upstreamResponse struct {
 	Body       string              `json:"body"`
 }
 
+type sendRequestResult struct {
+	err    error
+	result upstreamResponse
+}
+
 type errorResponse struct {
 	Error string `json:"error"`
 }
@@ -60,6 +65,18 @@ func main() {
 			return
 		}
 
+		if validErr := validateURL(upstreamUrl.String()); validErr != nil {
+			err := sendJsonResponse[errorResponse](
+				w,
+				http.StatusBadRequest,
+				buildErrorResponse(validErr),
+			)
+			if err != nil {
+				slog.Error("unable to send error response: " + err.Error())
+			}
+			return
+		}
+
 		headers := r.Header.Clone()
 		headers.Del("Host")
 		headers.Add("X-Forwarded-For", r.RemoteAddr)
@@ -90,13 +107,33 @@ func main() {
 		for {
 			select {
 			case fResponse := <-ch:
-				err := encodeJson(w, fResponse)
-				if err != nil {
-					slog.Default().Info("unable to send response: " + err.Error())
+				if fResponse.err != nil {
+					slog.Info("unable to send request: " + fResponse.err.Error())
+
+					var urlErr *url.Error
+					if errors.As(fResponse.err, &urlErr) {
+						if urlErr.Timeout() {
+							err := encodeJson(w, buildErrorResponse(fmt.Errorf("timeout")))
+							if err != nil {
+								slog.Default().Info("unable to send response: " + err.Error())
+							}
+							return
+						}
+					}
+
+					err := encodeJson(w, buildErrorResponse(fmt.Errorf("send request failed")))
+					if err != nil {
+						slog.Default().Info("unable to send response: " + err.Error())
+					}
+				} else {
+					err := encodeJson(w, fResponse.result)
+					if err != nil {
+						slog.Default().Info("unable to send response: " + err.Error())
+					}
 				}
 				return
 			case <-ctx.Done():
-				err := encodeJson(w, ctx.Err())
+				err := encodeJson(w, buildErrorResponse(errors.New("timeout")))
 				if err != nil {
 					slog.Default().Info("unable to send response: " + err.Error())
 				}
@@ -161,29 +198,48 @@ func sendJsonResponse[T any](w http.ResponseWriter, httpStatusCode int, body T) 
 	return encodeJson(w, body)
 }
 
-func sendRequest(httpClient *http.Client, proxyRequest *http.Request) chan upstreamResponse {
-	ch := make(chan upstreamResponse)
+func sendRequest(httpClient *http.Client, proxyRequest *http.Request) chan sendRequestResult {
+	ch := make(chan sendRequestResult)
 	go func() {
+		defer close(ch)
 		do, err := httpClient.Do(proxyRequest)
 		if err != nil {
-			panic(fmt.Errorf("http client error: %v", err))
+			ch <- sendRequestResult{err: err, result: upstreamResponse{}}
+			return
 		}
 		defer do.Body.Close()
 
 		body, err := io.ReadAll(do.Body)
 		if err != nil {
-			panic(fmt.Errorf("cannot read body: %v", err))
+			ch <- sendRequestResult{
+				err:    fmt.Errorf("cannot read body: %v", err),
+				result: upstreamResponse{},
+			}
+			return
 		}
 
-		fw := upstreamResponse{
-			StatusCode: do.StatusCode,
-			Headers:    do.Header,
-			Body:       string(body),
+		ch <- sendRequestResult{
+			err: nil,
+			result: upstreamResponse{
+				StatusCode: do.StatusCode,
+				Headers:    do.Header,
+				Body:       string(body),
+			},
 		}
-
-		ch <- fw
-		close(ch)
 	}()
 
 	return ch
+}
+
+func validateURL(input string) error {
+	parsedURL, err := url.Parse(input)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	if parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return fmt.Errorf("URL must have a scheme (e.g., http, https) and a host")
+	}
+
+	return nil
 }
