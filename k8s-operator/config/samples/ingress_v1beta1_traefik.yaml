@@ -1,0 +1,10 @@
+apiVersion: ingress.demo.morawskim.pl/v1beta1
+kind: Traefik
+metadata:
+  labels:
+    app.kubernetes.io/name: k8s-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: traefik-sample
+spec:
+  # TODO(user): Add fields here
+  lookForLabel: "demo.morawskim.pl/traefik-ingress"

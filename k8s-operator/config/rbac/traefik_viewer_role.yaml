@@ -1,32 +1,23 @@
----
+# permissions for end users to view traefiks.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: manager-role
+  labels:
+    app.kubernetes.io/name: k8s-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: traefik-viewer-role
 rules:
 - apiGroups:
   - ingress.demo.morawskim.pl
   resources:
   - traefiks
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
-- apiGroups:
-  - ingress.demo.morawskim.pl
-  resources:
-  - traefiks/finalizers
-  verbs:
-  - update
 - apiGroups:
   - ingress.demo.morawskim.pl
   resources:
   - traefiks/status
   verbs:
   - get
-  - patch
-  - update
