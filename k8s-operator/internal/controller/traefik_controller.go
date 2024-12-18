@@ -18,6 +18,9 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"github.com/pkg/errors"
+	"myoperator/internal/util"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,16 +50,87 @@ type TraefikReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.18.4/pkg/reconcile
 func (r *TraefikReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	// TODO(user): your logic here
+	list, err := fetchTraefikResources(r.Client)
+	if err != nil {
+		logger.Error(err, "Failed to fetch Traefik resources")
+	}
+
+	resource := ingressv1beta1.Traefik{}
+	err = r.Client.Get(context.Background(), req.NamespacedName, &resource)
+	if err != nil {
+		logger.Info("Requested resource not found")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	err = createIndexFile(list, r.Client, resource.Spec.TargetNamespace, resource.Spec.TargetConfigMapName, resource.Spec.TargetDeploymentName)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("Index file created")
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TraefikReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	mgr.GetLogger().Info("setting up manager")
+	err := AddToScheme(mgr.GetScheme())
+
+	if err != nil {
+		return errors.Wrap(err, "failed during adding traefik scheme")
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ingressv1beta1.Traefik{}).
 		Complete(r)
+}
+
+func fetchTraefikResources(k8sClient client.Client) ([]util.TraefikItem, error) {
+	ctx := context.Background()
+	traefikRouteList := &IngressRouteList{}
+	err := k8sClient.List(ctx, traefikRouteList, &client.ListOptions{})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list TraefikRoute: %w", err)
+	}
+
+	list := make([]util.TraefikItem, 0, len(traefikRouteList.Items))
+
+	for _, traefikRoute := range traefikRouteList.Items {
+		list = append(list, util.TraefikItem{
+			Name:      traefikRoute.Name,
+			Namespace: traefikRoute.Namespace,
+			Url:       "https://todo.example.com?name=" + traefikRoute.Name,
+		})
+	}
+
+	return list, nil
+}
+
+func createIndexFile(data []util.TraefikItem, client client.Client, targetNamespace, targetConfigMapName, targetDeploymentName string) error {
+	if len(targetNamespace) == 0 || len(targetConfigMapName) == 0 || len(targetDeploymentName) == 0 {
+		return nil
+	}
+
+	indexFile, err := util.GenerateIndexFile(data)
+
+	if err != nil {
+		return err
+	}
+
+	err = util.CreateConfigMap(client, targetNamespace, targetConfigMapName, indexFile)
+	if err != nil {
+		return err
+	}
+
+	err = util.RestartDeployment(client, targetNamespace, targetDeploymentName)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

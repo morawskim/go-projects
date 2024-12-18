@@ -28,7 +28,10 @@ type TraefikSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	LookForLabel string `json:"lookForLabel,omitempty"`
+	LookForLabel         string `json:"lookForLabel,omitempty"`
+	TargetNamespace      string `json:"targetNamespace,omitempty"`
+	TargetDeploymentName string `json:"targetDeploymentName,omitempty"`
+	TargetConfigMapName  string `json:"targetConfigMapName,omitempty"`
 }
 
 // TraefikStatus defines the observed state of Traefik

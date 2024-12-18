@@ -8,3 +8,6 @@ metadata:
 spec:
   # TODO(user): Add fields here
   lookForLabel: "demo.morawskim.pl/traefik-ingress"
+  targetNamespace: "prod"
+  targetConfigMapName: "demo-index"
+  targetDeploymentName: "demo-index"

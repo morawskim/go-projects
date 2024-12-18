@@ -1,0 +1,29 @@
+namespace: k8s-operator-system
+# the name of the Kubernetes deployment
+name:  k8s-operator-controller-manager
+image: okteto/golang:1
+command: bash
+
+metadata:
+  annotations:
+    fluxcd.io/ignore: "true"
+    kustomize.toolkit.fluxcd.io/reconcile: disabled
+
+persistentVolume:
+  enabled: true
+volumes:
+  - /go
+sync:
+  - .:/usr/src/app
+
+securityContext:
+  runAsUser: 1
+  capabilities:
+    add:
+      - SYS_PTRACE
+
+forward:
+  - 2345:2345
+
+environment:
+  GOCACHE: /go/.cache
