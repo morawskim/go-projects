@@ -53,16 +53,16 @@ func (r *TraefikReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	logger := log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	list, err := fetchTraefikResources(r.Client)
-	if err != nil {
-		logger.Error(err, "Failed to fetch Traefik resources")
-	}
-
 	resource := ingressv1beta1.Traefik{}
-	err = r.Client.Get(context.Background(), req.NamespacedName, &resource)
+	err := r.Client.Get(context.Background(), req.NamespacedName, &resource)
 	if err != nil {
 		logger.Info("Requested resource not found")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	list, err := fetchTraefikResources(r.Client, resource.Spec.LookForLabel)
+	if err != nil {
+		logger.Error(err, "Failed to fetch Traefik resources")
 	}
 
 	err = createIndexFile(list, r.Client, resource.Spec.TargetNamespace, resource.Spec.TargetConfigMapName, resource.Spec.TargetDeploymentName)
@@ -89,7 +89,7 @@ func (r *TraefikReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func fetchTraefikResources(k8sClient client.Client) ([]util.TraefikItem, error) {
+func fetchTraefikResources(k8sClient client.Client, label string) ([]util.TraefikItem, error) {
 	ctx := context.Background()
 	traefikRouteList := &IngressRouteList{}
 	err := k8sClient.List(ctx, traefikRouteList, &client.ListOptions{})
@@ -101,11 +101,13 @@ func fetchTraefikResources(k8sClient client.Client) ([]util.TraefikItem, error) 
 	list := make([]util.TraefikItem, 0, len(traefikRouteList.Items))
 
 	for _, traefikRoute := range traefikRouteList.Items {
-		list = append(list, util.TraefikItem{
-			Name:      traefikRoute.Name,
-			Namespace: traefikRoute.Namespace,
-			Url:       "https://todo.example.com?name=" + traefikRoute.Name,
-		})
+		if value, ok := traefikRoute.Labels[label]; ok {
+			list = append(list, util.TraefikItem{
+				Name:      traefikRoute.Name,
+				Namespace: traefikRoute.Namespace,
+				Url:       "https://" + value,
+			})
+		}
 	}
 
 	return list, nil
