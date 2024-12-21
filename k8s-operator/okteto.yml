@@ -17,10 +17,14 @@ sync:
   - .:/usr/src/app
 
 securityContext:
-  runAsUser: 1
+  runAsUser: 1000
   capabilities:
     add:
       - SYS_PTRACE
+
+resources:
+  limits:
+    memory: 1024Mi
 
 forward:
   - 2345:2345

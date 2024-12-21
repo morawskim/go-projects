@@ -19,16 +19,24 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"myoperator/internal/util"
-
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
+	"k8s.io/apimachinery/pkg/types"
 	ingressv1beta1 "myoperator/api/v1beta1"
+	"myoperator/internal/util"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"strings"
 )
+
+const ResourceLabel string = "demo.morawskim.pl/traefik-url"
+const ResourceManagedLabel string = "demo.morawskim.pl/manged-by"
+const Separator string = "/"
 
 // TraefikReconciler reconciles a Traefik object
 type TraefikReconciler struct {
@@ -53,25 +61,50 @@ func (r *TraefikReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	logger := log.FromContext(ctx)
 
 	// TODO(user): your logic here
+	logger.Info("Start Traefik reconciliation")
 	resource := ingressv1beta1.Traefik{}
 	err := r.Client.Get(context.Background(), req.NamespacedName, &resource)
+	if err == nil {
+		return r.reconcileTraefik(&resource, logger)
+	}
+
+	route := IngressRoute{}
+	err = r.Client.Get(ctx, req.NamespacedName, &route)
+	if err == nil {
+		if val, ok := route.Annotations[ResourceManagedLabel]; ok {
+			chunks := strings.SplitN(val, Separator, 2)
+			if len(chunks) == 2 {
+				err = r.Client.Get(context.Background(), client.ObjectKey{
+					Namespace: chunks[0],
+					Name:      chunks[1],
+				}, &resource)
+
+				if err == nil {
+					return r.reconcileTraefik(&resource, logger)
+				}
+			}
+		}
+	}
+
 	if err != nil {
-		logger.Info("Requested resource not found")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	return ctrl.Result{}, nil
+}
+
+func (r *TraefikReconciler) reconcileTraefik(resource *ingressv1beta1.Traefik, logger logr.Logger) (ctrl.Result, error) {
 	list, err := fetchTraefikResources(r.Client, resource.Spec.LookForLabel)
 	if err != nil {
 		logger.Error(err, "Failed to fetch Traefik resources")
 	}
 
-	err = createIndexFile(list, r.Client, resource.Spec.TargetNamespace, resource.Spec.TargetConfigMapName, resource.Spec.TargetDeploymentName)
+	err = createIndexFile(list, r.Client, resource.Spec.TargetNamespace, resource.Spec.TargetConfigMapName, resource.Spec.TargetDeploymentName, resource.Name, resource.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	logger.Info("Index file created")
-
 	return ctrl.Result{}, nil
 }
 
@@ -86,7 +119,15 @@ func (r *TraefikReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ingressv1beta1.Traefik{}).
-		Complete(r)
+		Watches(
+			&IngressRoute{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+				labels := object.GetLabels()
+				_, ok := labels[ResourceLabel]
+				return ok
+			})),
+		).Complete(r)
 }
 
 func fetchTraefikResources(k8sClient client.Client, label string) ([]util.TraefikItem, error) {
@@ -113,7 +154,7 @@ func fetchTraefikResources(k8sClient client.Client, label string) ([]util.Traefi
 	return list, nil
 }
 
-func createIndexFile(data []util.TraefikItem, client client.Client, targetNamespace, targetConfigMapName, targetDeploymentName string) error {
+func createIndexFile(data []util.TraefikItem, k8sClient client.Client, targetNamespace, targetConfigMapName, targetDeploymentName, resourceName, resourceNamespace string) error {
 	if len(targetNamespace) == 0 || len(targetConfigMapName) == 0 || len(targetDeploymentName) == 0 {
 		return nil
 	}
@@ -124,12 +165,36 @@ func createIndexFile(data []util.TraefikItem, client client.Client, targetNamesp
 		return err
 	}
 
-	err = util.CreateConfigMap(client, targetNamespace, targetConfigMapName, indexFile)
+	ctx := context.Background()
+	for _, traefikItem := range data {
+		route := IngressRoute{}
+		// see https://www.rfc-editor.org/rfc/rfc6901#section-3 for why we replace "/"
+		patchData := []byte(fmt.Sprintf(
+			`[ {"op": "replace", "path": "/metadata/annotations/%s", "value": "%s"} ]`,
+			strings.ReplaceAll(ResourceManagedLabel, "/", "~1"),
+			resourceNamespace+Separator+resourceName,
+		))
+		err = k8sClient.Get(ctx, client.ObjectKey{
+			Namespace: traefikItem.Namespace,
+			Name:      traefikItem.Name,
+		}, &route)
+
+		if err != nil {
+			return errors.Wrap(err, "failed to get traefik route resource")
+		}
+
+		err = k8sClient.Patch(ctx, &route, client.RawPatch(types.JSONPatchType, patchData))
+		if err != nil {
+			return errors.Wrap(err, "failed to patch traefik resource")
+		}
+	}
+
+	err = util.CreateConfigMap(k8sClient, targetNamespace, targetConfigMapName, indexFile)
 	if err != nil {
 		return err
 	}
 
-	err = util.RestartDeployment(client, targetNamespace, targetDeploymentName)
+	err = util.RestartDeployment(k8sClient, targetNamespace, targetDeploymentName)
 	if err != nil {
 		return err
 	}
