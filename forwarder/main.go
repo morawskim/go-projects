@@ -47,11 +47,13 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
+	//todo mmo test jednostkowy
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		flusher, isFlusher := w.(http.Flusher)
 		ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
 		defer cancel()
 
+		//test brak url
 		upstreamUrl, err := url.Parse(r.URL.Query().Get("url"))
 		if err != nil {
 			err := sendJsonResponse[errorResponse](
@@ -65,6 +67,7 @@ func main() {
 			return
 		}
 
+		// test niepoprawny url
 		if validErr := validateURL(upstreamUrl.String()); validErr != nil {
 			err := sendJsonResponse[errorResponse](
 				w,

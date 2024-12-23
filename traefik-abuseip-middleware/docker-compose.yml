@@ -1,4 +1,21 @@
 services:
+  cli:
+    image: okteto/golang:1.22
+    pid: container:traefik-abuseip-middleware-traefik-1
+    tty: true
+    cap_add:
+      - SYS_PTRACE
+    ports:
+      - "2345:2345"
+    depends_on:
+      - traefik
+    #  go install github.com/go-delve/delve/cmd/dlv@v1.23.0
+    # dlv attach 1 --continue --accept-multiclient --listen=:2345 --headless=true --api-version=2 --check-go-version=false --only-same-user=false --log ./tmp/main
+
+    # go install github.com/traefik-contrib/yaegi-debug-adapter
+    # SetupLocalPlugins
+
+
   traefik:
     image: traefik:v3.0
     command:
