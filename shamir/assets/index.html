@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <script src="wasm_exec.js"></script>
+    <style>
+    </style>
+</head>
+<body>
+
+<h2>Shamir</h2>
+<div style="display: flex; flex-direction: column">
+    <label>
+        Text to encrypt
+        <textarea id="textToEncrypt"></textarea>
+        <button id="btnEncryptText">Encrypt</button>
+    </label>
+
+    <label>
+        Result
+        <textarea readonly id="shamirParts" rows="8"></textarea>
+    </label>
+</div>
+
+<div style="display: flex; flex-direction: column">
+    <label>
+        Text to decrypt (at least 3 parts)
+        <textarea id="textToDecrypt" rows="8"></textarea>
+        <button id="btnDecryptText">Decrypt</button>
+    </label>
+
+    <label>
+        Result
+        <textarea readonly id="shamirResult"></textarea>
+    </label>
+</div>
+
+
+<script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch('functions.wasm'), go.importObject).then((result) => {
+        go.run(result.instance);
+    });
+
+    document.getElementById('btnEncryptText').addEventListener('click', (e) => {
+        const val = document.getElementById('textToEncrypt').value;
+        const {result, error} = shamirSplit(val);
+        if (error) {
+            alert(error)
+        } else {
+            const parts = JSON.parse(result)
+            document.getElementById('shamirParts').value = parts.join("\n");
+            console.log('text has been encrypted');
+        }
+    })
+
+    document.getElementById('btnDecryptText').addEventListener('click', (e) => {
+        const val = document.getElementById('textToDecrypt').value;
+        const {result, error} = shamirCombine(val);
+        if (error) {
+            alert(error)
+        } else {
+            document.getElementById('shamirResult').value = result;
+            console.log('text has been decrypted');
+        }
+    })
+</script>
+</body>
+</html>
