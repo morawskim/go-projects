@@ -48,8 +48,7 @@
         if (error) {
             alert(error)
         } else {
-            const parts = JSON.parse(result)
-            document.getElementById('shamirParts').value = parts.join("\n");
+            document.getElementById('shamirParts').value = result.join("\n");
             console.log('text has been encrypted');
         }
     })

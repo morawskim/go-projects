@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/vault/shamir"
 	"strings"
@@ -32,15 +31,13 @@ func wrapperForShamirSplit() js.Func {
 		parts, err := split([]byte(value))
 
 		if err == nil {
-			jsonData, err := json.Marshal(parts)
-
-			if err == nil {
-				result["result"] = string(jsonData)
-				result["error"] = nil
-			} else {
-				result["result"] = nil
-				result["error"] = fmt.Errorf("failed to encode shamir parts: %s", err)
+			jsArray := js.Global().Get("Array").New(len(parts))
+			for i, str := range parts {
+				jsArray.SetIndex(i, js.ValueOf(str))
 			}
+
+			result["result"] = jsArray
+			result["error"] = nil
 		} else {
 			result["result"] = nil
 			result["error"] = err
