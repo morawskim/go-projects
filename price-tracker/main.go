@@ -71,6 +71,7 @@ func main() {
 
 			i := config{}
 			b, err := loadConfigFile(cfgFile)
+			cobra.CheckErr(err)
 			err = yaml.Unmarshal(b, &i)
 			cobra.CheckErr(err)
 			pc, mapPr := processConfig(&i)

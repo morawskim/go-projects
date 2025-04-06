@@ -1,6 +1,6 @@
 .PHONY: build-image publish-image
 
-TAG := v0.1
+TAG := v0.2.1
 
 build-image:
 	docker build -t ghcr.io/morawskim/price-tracker:$(TAG) .
