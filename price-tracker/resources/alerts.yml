@@ -1,0 +1,11 @@
+groups:
+  - name: PriceTracker
+    rules:
+      - alert: PriceHasChanged
+        expr: 'last_over_time(price_tracker{job="price-tracker-exporter"}[12h]) and on(instance, job, Product) changes(price_tracker{job="price-tracker-exporter"}[12h]) > 0'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Price has been changed for product {{ $labels.Product }}
+          description: 'Price has been changed for product "{{ $labels.Product }}"\n  VALUE = {{ $value }}'

@@ -1,0 +1,28 @@
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 3h
+
+tests:
+  - name: PriceHasChanged
+    interval: 3h
+    input_series:
+      - series: 'price_tracker{job="price-tracker-exporter", Product="Foo"}'
+        values: "4 4 4 2 2"
+    alert_rule_test:
+      - eval_time: 3h
+        alertname: PriceHasChanged
+        exp_alerts: []
+      - eval_time: 6h
+        alertname: PriceHasChanged
+        exp_alerts: []
+      - eval_time: 12h
+        alertname: PriceHasChanged
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: price-tracker-exporter
+              Product: Foo
+            exp_annotations:
+              summary: Price has been changed for product Foo
+              description: Price has been changed for product "Foo"\n  VALUE = 2
