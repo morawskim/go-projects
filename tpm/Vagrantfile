@@ -50,7 +50,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     add-apt-repository ppa:longsleep/golang-backports
     apt-get update
-    apt-get install -y tpm2-tools golang-go
+    apt-get install -y tpm2-tools golang-go basez
     gpasswd --add vagrant tss
   SHELL
 end
