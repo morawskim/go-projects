@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/go-tpm/legacy/tpm2"
-	"github.com/google/go-tpm/tpmutil"
+	"github.com/google/go-tpm/tpm2"
+	"github.com/google/go-tpm/tpm2/transport/linuxtpm"
 )
 
 var JWT_HEADER = base64.URLEncoding.EncodeToString([]byte(`{"alg":"ES256","typ":"JWT"}`))
@@ -19,36 +19,72 @@ func main() {
 	var tpmPath = flag.String("tpm", "/dev/tpmrm0", "The path to the TPM device to use")
 	flag.Parse()
 
-	tpmRwc, err := tpm2.OpenTPM(*tpmPath)
+	thetpm, err := linuxtpm.Open(*tpmPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Couldn't open the TPM file %s: %s\n", *tpmPath, err)
 		return
 	}
-	defer tpmRwc.Close()
+	defer thetpm.Close()
+
+	keyHandler := tpm2.TPMHandle(0x81010001)
+	pubResp, err := tpm2.ReadPublic{
+		ObjectHandle: keyHandler,
+	}.Execute(thetpm)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Couldn't read public key: %s\n", err)
+		return
+	}
 
 	digest := sha256.Sum256([]byte(JWT_HEADER + "." + JWT_PAYLOAD))
-
-	signature, err := tpm2.Sign(
-		tpmRwc,
-		tpmutil.Handle(0x81010001),
-		"",
-		digest[:],
-		nil,
-		&tpm2.SigScheme{
-			Alg:  tpm2.AlgECDSA,
-			Hash: tpm2.AlgSHA256,
+	resp, err := tpm2.Sign{
+		KeyHandle: tpm2.NamedHandle{
+			Handle: keyHandler,
+			Name:   pubResp.Name,
 		},
-	)
+		Digest: tpm2.TPM2BDigest{
+			Buffer: digest[:],
+		},
+		InScheme: tpm2.TPMTSigScheme{
+			Scheme: tpm2.TPMAlgECDSA,
+			Details: tpm2.NewTPMUSigScheme(
+				tpm2.TPMAlgECDSA,
+				&tpm2.TPMSSchemeHash{
+					HashAlg: tpm2.TPMAlgSHA256,
+				},
+			),
+		},
+		Validation: tpm2.TPMTTKHashCheck{
+			Tag: tpm2.TPMSTHashCheck,
+		},
+	}.Execute(thetpm)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Couldn't sign: %s\n", err)
 		return
 	}
 
-	rBytes := signature.ECC.R.FillBytes(make([]byte, 32))
-	sBytes := signature.ECC.S.FillBytes(make([]byte, 32))
+	signature, err := resp.Signature.Signature.ECDSA()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Couldn't get ECDSA: %s\n", err)
+		return
+	}
 
-	rawSig := append(rBytes, sBytes...)
+	rBuffer := signature.SignatureR.Buffer
+	sBuffer := signature.SignatureS.Buffer
+
+	rawSig := append(leftPad(rBuffer, 32), leftPad(sBuffer, 32)...)
 	jwtSig := base64.RawURLEncoding.EncodeToString(rawSig)
 
 	fmt.Println(JWT_HEADER + "." + JWT_PAYLOAD + "." + jwtSig)
+}
+
+func leftPad(in []byte, size int) []byte {
+	if len(in) >= size {
+		return in
+	}
+	out := make([]byte, size)
+	copy(out[size-len(in):], in)
+
+	return out
 }
