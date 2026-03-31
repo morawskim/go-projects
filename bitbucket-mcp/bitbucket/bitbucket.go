@@ -2,6 +2,7 @@ package bitbucket
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/ktrysmt/go-bitbucket"
 )
@@ -29,11 +30,36 @@ func GetOpenPr() []string {
 
 	for _, value := range values {
 		pr := value.(map[string]interface{})
+		prID := int(pr["id"].(float64))
+		idStr := strconv.Itoa(prID)
+		resDetails, err := client.Repositories.PullRequests.Get(&bitbucket.PullRequestsOptions{
+			ID:       idStr,
+			Owner:    cfg.getRepoOwner(),
+			RepoSlug: cfg.getRepoSlug(),
+		})
+		if err != nil {
+			panic(err)
+		}
+		resDetailsMap := resDetails.(map[string]interface{})
+		participants := resDetailsMap["participants"].([]interface{})
+		isApproved := false
+		for _, participant := range participants {
+			participantMap := participant.(map[string]interface{})
+			if participantMap["approved"].(bool) {
+				isApproved = true
+				break
+			}
+		}
+
+		if isApproved {
+			continue
+		}
+
 		result = append(result, fmt.Sprintf(
 			"%s - https://bitbucket.org/%s/pull-requests/%d",
 			pr["title"],
 			cfg.bitbucketRepo,
-			int(pr["id"].(float64))))
+			prID))
 	}
 
 	return result
