@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"sync/atomic"
 )
 
@@ -18,13 +21,25 @@ const fileNameKey contextKey = "logFileName"
 
 func main() {
 	var target string
+	var outputDir = ""
 	counter := atomic.Uint64{}
 
 	flag.StringVar(&target, "target", "", "Target URL for reverse proxy")
+	flag.StringVar(&outputDir, "output-dir", "", "Output directory for request/respone dump")
 	flag.Parse()
 
 	if "" == target {
 		log.Fatalln("Target URL cannot be empty")
+	}
+
+	if "" != outputDir {
+		exist, err := exists(outputDir)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if !exist {
+			log.Fatalln(fmt.Sprintf("Output directory %s does not exist", outputDir))
+		}
 	}
 
 	targetUrl, err := url.Parse(target)
@@ -35,7 +50,7 @@ func main() {
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(request *httputil.ProxyRequest) {
 			counter.Add(1)
-			fileName := fmt.Sprintf("request_%05d.log", counter.Load())
+			fileName := path.Join(outputDir, fmt.Sprintf("request_%05d.log", counter.Load()))
 
 			reqDump, err := httputil.DumpRequest(request.In, true)
 			if err != nil {
@@ -82,9 +97,21 @@ func main() {
 		},
 	}
 
+	log.Println("Listing on :8081")
 	err = http.ListenAndServe(":8081", proxy)
 
 	if err != nil {
 		panic(err)
 	}
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }
