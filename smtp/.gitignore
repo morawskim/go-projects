@@ -1,1 +1,4 @@
 .idea/
+/gosmtp
+gosmtp_*.deb
+

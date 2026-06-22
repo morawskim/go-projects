@@ -1,0 +1,45 @@
+# This is an example nfpm configuration file.
+# Make sure to check the documentation at https://nfpm.goreleaser.com
+#
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+name: "gosmtp"
+arch: "amd64"
+platform: "linux"
+version: "1.0.0"
+section: "default"
+priority: "extra"
+
+maintainer: "Marcin Morawski <marcin@morawskim.pl>"
+description: |
+  A simple SMTP server written in Go that receives emails and forwards their content as notifications using the shoutrrr library.
+vendor: "Morawskim"
+homepage: "https://github.com/morawskim/go-projects/tree/main/smtp"
+license: "MIT"
+contents:
+  - src: ./gosmtp
+    dst: /usr/bin/gosmtp
+    file_info:
+      mode: 0755
+      owner: root
+      group: root
+  - src: ./pkg/systemd/gosmtp.service
+    dst: /usr/lib/systemd/system/gosmtp.service
+    file_info:
+      mode: 0644
+      owner: root
+      group: root
+  - src: ./pkg/gosmtp.conf
+    dst: /etc/default/gosmtp
+    type: config|noreplace
+    packager: deb
+  # - src: ./pkg/gosmtp.conf
+  #   dst: /etc/sysconfig/gosmtp
+  #   type: config|noreplace
+  #   packager: rpm
+
+scripts:
+  postinstall: ./pkg/scripts/postinstall.sh
