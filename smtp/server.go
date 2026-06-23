@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"os"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 )
 
 var notificationURL string
+var addr string
 
 type Backend struct{}
 type Session struct {
@@ -57,6 +59,15 @@ func (bkd *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	}, nil
 }
 
+func validateAddr(addr string) error {
+	_, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Errorf("invalid address: %w", err)
+	}
+
+	return nil
+}
+
 func main() {
 	logger := slog.New(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}),
@@ -64,6 +75,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	flag.StringVar(&notificationURL, "notification-url", "", "Notification url")
+	flag.StringVar(&addr, "addr", "127.0.0.1:25", "SMTP server listening address in host:port format")
 	flag.Parse()
 
 	if notificationURL == "" {
@@ -71,9 +83,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if validateAddr(addr) != nil {
+		slog.Default().Error("Invalid address")
+		os.Exit(1)
+	}
+
 	server := smtp.NewServer(&Backend{})
 	defer server.Close()
-	server.Addr = "localhost:1025"
+	server.Addr = addr
 	server.Domain = "localhost"
 	server.WriteTimeout = 5 * time.Second
 	server.ReadTimeout = 5 * time.Second

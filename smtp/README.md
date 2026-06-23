@@ -21,7 +21,12 @@ For example, to send notifications to Telegram:
 ./smtp-server -notification-url "telegram://token@telegram?channels=channel-id"
 ```
 
-The server listens on `localhost:1025` by default.
+### Options
+
+- `-notification-url`: Notification service URL (required).
+- `-addr`: SMTP server listening address in `host:port` format (default: `127.0.0.1:25`).
+
+The server listens on `127.0.0.1:25` by default.
 
 ## Test
 
@@ -29,7 +34,7 @@ You can test the SMTP server using the `swaks` tool.
 Use the following Docker command to send a test email:
 
 ```bash
-docker run --network host --rm morawskim/swaks:latest --to user@example.com --server localhost:1025
+docker run --network host --rm morawskim/swaks:latest --to user@example.com --server 127.0.0.1:25
 ```
 
 If everything is configured correctly, the server will receive the email 
