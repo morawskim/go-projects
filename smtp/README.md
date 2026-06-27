@@ -21,9 +21,18 @@ For example, to send notifications to Telegram:
 ./smtp-server -notification-url "telegram://token@telegram?channels=channel-id"
 ```
 
+### Configuration
+
+The notification URL can be provided in several ways (checked in this order):
+
+1. Command-line flag: `-notification-url`
+2. Environment variable: `NOTIFICATION_URL`
+3. File path via environment variable: `NOTIFICATION_URL_FILE` (reads the notification URL from the specified file)
+4. Systemd credentials: looks for a credential named `notification_url` in the `CREDENTIALS_DIRECTORY` (if set).
+
 ### Options
 
-- `-notification-url`: Notification service URL (required).
+- `-notification-url`: Notification URL.
 - `-addr`: SMTP server listening address in `host:port` format (default: `127.0.0.1:25`).
 
 The server listens on `127.0.0.1:25` by default.

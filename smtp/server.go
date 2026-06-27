@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/containrrr/shoutrrr"
@@ -68,6 +70,29 @@ func validateAddr(addr string) error {
 	return nil
 }
 
+func readCredential(name string) (string, error) {
+	if v := os.Getenv(name); v != "" {
+		return v, nil
+	}
+
+	if f := os.Getenv(name + "_FILE"); f != "" {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(string(b)), nil
+	}
+
+	if dir := os.Getenv("CREDENTIALS_DIRECTORY"); dir != "" {
+		p := filepath.Join(dir, strings.ToLower(name))
+		if b, err := os.ReadFile(p); err == nil {
+			return strings.TrimSpace(string(b)), nil
+		}
+	}
+
+	return "", fmt.Errorf("credential %s not found", name)
+}
+
 func main() {
 	logger := slog.New(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}),
@@ -77,6 +102,13 @@ func main() {
 	flag.StringVar(&notificationURL, "notification-url", "", "Notification url")
 	flag.StringVar(&addr, "addr", "127.0.0.1:25", "SMTP server listening address in host:port format")
 	flag.Parse()
+
+	if notificationURL == "" {
+		val, err := readCredential("NOTIFICATION_URL")
+		if err == nil {
+			notificationURL = val
+		}
+	}
 
 	if notificationURL == "" {
 		slog.Default().Error("Notification url is required")
