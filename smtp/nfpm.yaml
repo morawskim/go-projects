@@ -26,20 +26,21 @@ contents:
       mode: 0755
       owner: root
       group: root
-  - src: ./pkg/systemd/gosmtp.service
+  - src: ./pkg/systemd/gosmtp-${PACKAGER}.service
     dst: /usr/lib/systemd/system/gosmtp.service
     file_info:
       mode: 0644
       owner: root
       group: root
+    expand: true
   - src: ./pkg/gosmtp.conf
     dst: /etc/default/gosmtp
     type: config|noreplace
     packager: deb
-  # - src: ./pkg/gosmtp.conf
-  #   dst: /etc/sysconfig/gosmtp
-  #   type: config|noreplace
-  #   packager: rpm
+  - src: ./pkg/gosmtp.conf
+    dst: /etc/sysconfig/gosmtp
+    type: config|noreplace
+    packager: rpm
 
 scripts:
   postinstall: ./pkg/scripts/postinstall.sh
