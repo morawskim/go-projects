@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/containrrr/shoutrrr"
 	"github.com/emersion/go-smtp"
@@ -46,10 +47,13 @@ func (s *Session) Data(r io.Reader) error {
 	if b, err := io.ReadAll(r); err != nil {
 		return err
 	} else {
-		err := shoutrrr.Send(notificationURL, string(b))
-		if err != nil {
-			slog.Default().Error(fmt.Sprintf("Cannot forward message: %v", err))
-			return errors.New("cannot forward message")
+		chunks := splitStringIntoChunks(string(b))
+		for _, chunk := range chunks {
+			err := shoutrrr.Send(notificationURL, chunk)
+			if err != nil {
+				slog.Default().Error(fmt.Sprintf("Cannot forward message: %v", err))
+				return errors.New("cannot forward message")
+			}
 		}
 	}
 	return nil
@@ -59,6 +63,25 @@ func (bkd *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	return &Session{
 		rcpt: make([]string, 1),
 	}, nil
+}
+
+func splitStringIntoChunks(s string) []string {
+	const MaxSize = 4000
+	var chunks []string
+
+	for len(s) > MaxSize {
+		i := MaxSize
+		for i >= MaxSize-utf8.UTFMax && !utf8.RuneStart(s[i]) {
+			i--
+		}
+		chunks = append(chunks, s[:i])
+		s = s[i:]
+	}
+	if len(s) > 0 {
+		chunks = append(chunks, s)
+	}
+
+	return chunks
 }
 
 func validateAddr(addr string) error {
