@@ -26,3 +26,29 @@ tests:
             exp_annotations:
               summary: Price has been changed for product Foo
               description: Price has been changed for product "Foo"\n  VALUE = 2
+
+  - name: ProductScraperFailed
+    interval: 3h
+    input_series:
+      - series: 'product_scraper{job="price-tracker-exporter", Product="Foo"}'
+        values: "1 1 1 1 0 1"
+    alert_rule_test:
+      - eval_time: 3h
+        alertname: ProductScraperFailed
+        exp_alerts: []
+      - eval_time: 6h
+        alertname: ProductScraperFailed
+        exp_alerts: []
+      - eval_time: 12h
+        alertname: ProductScraperFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: price-tracker-exporter
+              Product: Foo
+            exp_annotations:
+              summary: Scrape failed for product Foo
+              description: Scrape failed for product "Foo"\n  VALUE = 0
+      - eval_time: 15h
+        alertname: ProductScraperFailed
+        exp_alerts: [ ]

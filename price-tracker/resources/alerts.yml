@@ -9,3 +9,11 @@ groups:
         annotations:
           summary: Price has been changed for product {{ $labels.Product }}
           description: 'Price has been changed for product "{{ $labels.Product }}"\n  VALUE = {{ $value }}'
+      - alert: ProductScraperFailed
+        expr: 'last_over_time(product_scraper{}[12h]) == 0'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Scrape failed for product {{ $labels.Product }}
+          description: 'Scrape failed for product "{{ $labels.Product }}"\n  VALUE = {{ $value }}'
