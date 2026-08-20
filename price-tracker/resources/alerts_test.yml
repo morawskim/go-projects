@@ -8,7 +8,7 @@ tests:
     interval: 3h
     input_series:
       - series: 'price_tracker{job="price-tracker-exporter", Product="Foo"}'
-        values: "4 4 4 2 2"
+        values: "5 5 5 2 2"
     alert_rule_test:
       - eval_time: 3h
         alertname: PriceHasChanged
@@ -16,7 +16,7 @@ tests:
       - eval_time: 6h
         alertname: PriceHasChanged
         exp_alerts: []
-      - eval_time: 12h
+      - eval_time: 9h
         alertname: PriceHasChanged
         exp_alerts:
           - exp_labels:
@@ -26,6 +26,9 @@ tests:
             exp_annotations:
               summary: Price has been changed for product Foo
               description: Price has been changed for product "Foo"\n  VALUE = 2
+      - eval_time: 12h
+        alertname: PriceHasChanged
+        exp_alerts: []
 
   - name: ProductScraperFailed
     interval: 3h
@@ -48,7 +51,7 @@ tests:
               Product: Foo
             exp_annotations:
               summary: Scrape failed for product Foo
-              description: Scrape failed for product "Foo"\n  VALUE = 0
+              description: Scrape failed for product "Foo"\n
       - eval_time: 15h
         alertname: ProductScraperFailed
         exp_alerts: [ ]
