@@ -40,6 +40,14 @@ func updateLastScrapeMetric() {
 	lastScrape.SetToCurrentTime()
 }
 
+func resetAllProductMetrics(items []item2) {
+	productScraper.Reset()
+	priceMetric.Reset()
+	for _, i := range items {
+		productScraper.With(prometheus.Labels{"Product": i.productName}).Set(0)
+	}
+}
+
 func registerMetrics(items []item2, minPriceCollector *minPriceCollector) {
 	prometheus.MustRegister(priceMetric)
 	prometheus.MustRegister(productScraper)

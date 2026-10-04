@@ -60,6 +60,7 @@ func newCollyCollector(debugFlag bool) *colly.Collector {
 func collect(products []item2, selectors map[string]selector, pr map[string]string, ch chan metric) {
 	slog.Default().Info("Collect data")
 	updateLastScrapeMetric()
+	resetAllProductMetrics(products)
 
 	c := newCollyCollector(false)
 	c.OnRequest(func(r *colly.Request) {
