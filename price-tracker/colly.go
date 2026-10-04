@@ -2,14 +2,15 @@ package main
 
 import (
 	"crypto/tls"
-	"github.com/expr-lang/expr"
-	"github.com/gocolly/colly/v2"
-	"github.com/gocolly/colly/v2/debug"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/expr-lang/expr"
+	"github.com/gocolly/colly/v2"
+	"github.com/gocolly/colly/v2/debug"
 )
 
 func newCollyCollector(debugFlag bool) *colly.Collector {
@@ -94,6 +95,10 @@ func collect(products []item2, selectors map[string]selector, pr map[string]stri
 	}
 
 	for _, product := range products {
+		slog.Default().Info(
+			"Fetching product",
+			slog.String("productUrl", product.productUrl),
+		)
 		c.Visit(product.productUrl)
 	}
 
