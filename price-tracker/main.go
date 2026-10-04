@@ -2,21 +2,46 @@ package main
 
 import (
 	"fmt"
-	"github.com/gocolly/colly/v2"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"regexp"
+	"sync"
+	"syscall"
 	"time"
+
+	"github.com/gocolly/colly/v2"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 type item2 struct {
 	productName string
 	productUrl  string
+}
+
+type trackerConfig struct {
+	mu        sync.RWMutex
+	products  []item2
+	selectors map[string]selector
+	pr        map[string]string
+}
+
+func (t *trackerConfig) setData(products []item2, selectors map[string]selector, pr map[string]string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.products = products
+	t.selectors = selectors
+	t.pr = pr
+}
+
+func (t *trackerConfig) getData() ([]item2, map[string]selector, map[string]string) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.products, t.selectors, t.pr
 }
 
 type expressionEnv struct {
@@ -51,6 +76,22 @@ func (expressionEnv) GetInputValue(el *colly.HTMLElement) string {
 	return el.Attr("value")
 }
 
+func reloadTrackerConfig(cfgFile string, t *trackerConfig) error {
+	i := config{}
+	b, err := loadConfigFile(cfgFile)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(b, &i)
+	if err != nil {
+		return err
+	}
+	pc, mapPr := processConfig(&i)
+	t.setData(pc, i.Selectors, mapPr)
+	slog.Default().Info("Configuration reloaded", slog.String("file", cfgFile))
+	return nil
+}
+
 var onlyDigitsRegex = regexp.MustCompile(`[^0-9.,]+`)
 
 func main() {
@@ -69,20 +110,44 @@ func main() {
 				cobra.CheckErr(fmt.Errorf("no config file specified"))
 			}
 
-			i := config{}
-			b, err := loadConfigFile(cfgFile)
+			trackerConfigStruct := &trackerConfig{}
+			err := reloadTrackerConfig(cfgFile, trackerConfigStruct)
 			cobra.CheckErr(err)
-			err = yaml.Unmarshal(b, &i)
-			cobra.CheckErr(err)
-			pc, mapPr := processConfig(&i)
 
 			collectorMinPrice := newMinPriceCollector()
 			ch := createChannel(collectorMinPrice)
-			registerMetrics(pc, collectorMinPrice)
-			go runPeriodically(interval, pc, i.Selectors, mapPr, ch)
+
+			products, _, _ := trackerConfigStruct.getData()
+			registerMetrics(products, collectorMinPrice)
+
+			// Handle signals for SIGHUP
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGHUP)
+
+			// Ticker for 1h reload
+			reloadTicker := time.NewTicker(1 * time.Hour)
+
+			go func() {
+				for {
+					select {
+					case sig := <-sigCh:
+						slog.Default().Info("Received signal", slog.String("signal", sig.String()))
+						if err := reloadTrackerConfig(cfgFile, trackerConfigStruct); err != nil {
+							slog.Default().Error("Failed to reload config on signal", slog.String("error", err.Error()))
+						}
+					case <-reloadTicker.C:
+						slog.Default().Info("Periodic config reload")
+						if err := reloadTrackerConfig(cfgFile, trackerConfigStruct); err != nil {
+							slog.Default().Error("Failed to periodic reload config", slog.String("error", err.Error()))
+						}
+					}
+				}
+			}()
+
+			go runPeriodically(interval, trackerConfigStruct, ch)
 
 			slog.Default().Info("starting http server")
-			register(pc, collectorMinPrice)
+			register(trackerConfigStruct, collectorMinPrice)
 			close(ch)
 		},
 	}
@@ -96,8 +161,9 @@ func main() {
 	}
 }
 
-func runPeriodically(interval time.Duration, products []item2, selectors map[string]selector, pr map[string]string, ch chan metric) {
+func runPeriodically(interval time.Duration, t *trackerConfig, ch chan metric) {
 	// Run the function immediately
+	products, selectors, pr := t.getData()
 	collect(products, selectors, pr, ch)
 
 	ticker := time.NewTicker(interval)
@@ -106,6 +172,7 @@ func runPeriodically(interval time.Duration, products []item2, selectors map[str
 	for {
 		select {
 		case <-ticker.C:
+			products, selectors, pr := t.getData()
 			collect(products, selectors, pr, ch)
 		}
 	}

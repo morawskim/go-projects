@@ -3,13 +3,14 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	io_prometheus_client "github.com/prometheus/client_model/go"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 )
 
 type metric struct {
@@ -71,10 +72,11 @@ type StatusItem struct {
 	Status   int
 }
 
-func register(products []item2, minPriceCollector *minPriceCollector) {
+func register(trackerConfig *trackerConfig, minPriceCollector *minPriceCollector) {
 	t := template.Must(template.New("status").Parse(tmpl))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		products, _, _ := trackerConfig.getData()
 		productStatus := make([]StatusItem, 0, len(products))
 
 		lastScrapeMetricDto := io_prometheus_client.Metric{}
