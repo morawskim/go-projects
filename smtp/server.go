@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/mail"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,27 +67,56 @@ func (bkd *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 }
 
 const (
-	maxChunkSize = 4000
-	longLineSize = 300
+	maxChunkBodySize = 3800
+	longLineSize     = 300
+	maxSubjectLength = 190
+	maxChunkSize     = maxChunkBodySize + maxSubjectLength
 )
+
+func extractSubject(raw string, maxSubjectLength int) string {
+	msg, err := mail.ReadMessage(strings.NewReader(raw))
+	if err != nil {
+		return ""
+	}
+	subject := msg.Header.Get("Subject")
+
+	return subject[0:min(len(subject), maxSubjectLength)]
+}
 
 func splitStringIntoChunks(s string) []string {
 	var chunks []string
+	isFirst := true
+	subject := extractSubject(s, maxSubjectLength)
 
-	for len(s) > maxChunkSize {
-		cut, skip := findSplitPoint(s)
-		chunks = append(chunks, s[:cut])
-		s = s[cut+skip:]
+	if len(subject) > 0 {
+		subject = "Subject: " + subject + "\n\n"
 	}
+
+	prependSubjectFn := func(isFirst bool, subject, txt string) string {
+		if !isFirst && len(subject) > 0 {
+			return subject + txt
+		}
+
+		return txt
+	}
+
+	for len(s) > maxChunkBodySize {
+		cut, skip := findSplitPoint(s)
+		txt := s[:cut]
+		chunks = append(chunks, prependSubjectFn(isFirst, subject, txt))
+		s = s[cut+skip:]
+		isFirst = false
+	}
+
 	if len(s) > 0 {
-		chunks = append(chunks, s)
+		chunks = append(chunks, prependSubjectFn(isFirst, subject, s))
 	}
 
 	return chunks
 }
 
 func findSplitPoint(s string) (cut, skip int) {
-	window := s[:maxChunkSize+1]
+	window := s[:maxChunkBodySize+1]
 
 	nl := strings.LastIndexByte(window, '\n')
 	if nl > 0 {
@@ -111,8 +141,8 @@ func findSplitPoint(s string) (cut, skip int) {
 		return nl, 1
 	}
 
-	i := maxChunkSize
-	for i > maxChunkSize-utf8.UTFMax && !utf8.RuneStart(s[i]) {
+	i := maxChunkBodySize
+	for i > maxChunkBodySize-utf8.UTFMax && !utf8.RuneStart(s[i]) {
 		i--
 	}
 	return i, 0

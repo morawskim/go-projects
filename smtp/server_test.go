@@ -223,21 +223,56 @@ systemctl restart packagekit.service
 systemctl restart polkit.service`
 
 	chunks := splitStringIntoChunks(input)
-	if len(chunks) != 2 {
+	if len(chunks) != 3 {
 		t.Fatalf("expected two chunks, got %d", len(chunks))
 	}
 
-	expectedEndOfChunk1 := `I: /boot/vmlinuz.old is now a symlink to vmlinuz-5.15.0-198-generic
-I: /boot/initrd.img.old is now a symlink to initrd.img-5.15.0-198-generic`
+	expectedEndOfChunk1 := `Setting up linux-headers-generic (5.15.0.203.175) ...
+Setting up linux-headers-virtual (5.15.0.203.175) ...
+Setting up linux-image-5.15.0-203-generic (5.15.0-203.213) ...`
 	if !strings.HasSuffix(chunks[0], expectedEndOfChunk1) {
 		t.Fatalf("expected chunk 1 to end with %q, got %q", expectedEndOfChunk1, chunks[0][len(chunks[0])-200:])
 	}
 
-	expectedStartOfChunk2 := `I: /boot/vmlinuz is now a symlink to vmlinuz-5.15.0-203-generic
-I: /boot/initrd.img is now a symlink to initrd.img-5.15.0-203-generic
-`
+	expectedStartOfChunk2 := `Subject: [reboot required] unattended-upgrades result for XXXXXXX: SUCCESS
+
+I: /boot/vmlinuz.old is now a symlink to vmlinuz-5.15.0-198-generic
+I: /boot/initrd.img.old is now a symlink to initrd.img-5.15.0-198-generic
+I: /boot/vmlinuz is now a symlink to vmlinuz-5.15.0-203-generic`
 
 	if !strings.HasPrefix(chunks[1], expectedStartOfChunk2) {
 		t.Fatalf("expected chunk 2 to start with %q, got %q", expectedStartOfChunk2, chunks[1][0:200])
+	}
+}
+
+func TestSplitMessageIntoChunks_RepeatsSubject(t *testing.T) {
+	subject := "[reboot required] unattended-upgrades result for host: SUCCESS"
+	body := strings.Repeat("alpha beta gamma delta.\n", 600)
+	raw := "From: a@b.c\r\nSubject: " + subject + "\r\n\r\n" + body
+
+	chunks := splitStringIntoChunks(raw)
+	if len(chunks) < 2 {
+		t.Fatalf("expected multiple chunks, got %d", len(chunks))
+	}
+	for i, c := range chunks {
+		if len(c) > maxChunkSize {
+			t.Errorf("chunk %d too long: %d", i, len(c))
+		}
+		if i > 0 && !strings.HasPrefix(c, "Subject: "+subject+"\n") {
+			t.Errorf("chunk %d does not start with subject: %q", i, c[:80])
+		}
+	}
+}
+
+func TestSplitMessageIntoChunks_EmptySubject(t *testing.T) {
+	raw := "From: a@b.c\r\n\r\n" + strings.Repeat("alpha beta gamma delta.\n", 600)
+	chunks := splitStringIntoChunks(raw)
+	if len(chunks) < 2 {
+		t.Fatalf("expected multiple chunks, got %d", len(chunks))
+	}
+	for i, c := range chunks[1:] {
+		if strings.HasPrefix(c, "Subject: \n") {
+			t.Errorf("chunk %d does not start with empty subject: %q", i+1, c[:20])
+		}
 	}
 }
