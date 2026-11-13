@@ -65,23 +65,57 @@ func (bkd *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	}, nil
 }
 
+const (
+	maxChunkSize = 4000
+	longLineSize = 300
+)
+
 func splitStringIntoChunks(s string) []string {
-	const MaxSize = 4000
 	var chunks []string
 
-	for len(s) > MaxSize {
-		i := MaxSize
-		for i >= MaxSize-utf8.UTFMax && !utf8.RuneStart(s[i]) {
-			i--
-		}
-		chunks = append(chunks, s[:i])
-		s = s[i:]
+	for len(s) > maxChunkSize {
+		cut, skip := findSplitPoint(s)
+		chunks = append(chunks, s[:cut])
+		s = s[cut+skip:]
 	}
 	if len(s) > 0 {
 		chunks = append(chunks, s)
 	}
 
 	return chunks
+}
+
+func findSplitPoint(s string) (cut, skip int) {
+	window := s[:maxChunkSize+1]
+
+	nl := strings.LastIndexByte(window, '\n')
+	if nl > 0 {
+		lineStart := nl + 1
+		lineEnd := len(s)
+		if i := strings.IndexByte(s[lineStart:], '\n'); i >= 0 {
+			lineEnd = lineStart + i
+		}
+		if lineEnd-lineStart <= longLineSize {
+			return nl, 1
+		}
+	}
+
+	from := 0
+	if nl >= 0 {
+		from = nl + 1
+	}
+	if sp := strings.LastIndexByte(window[from:], ' '); sp >= 0 && from+sp > 0 {
+		return from + sp, 1
+	}
+	if nl > 0 {
+		return nl, 1
+	}
+
+	i := maxChunkSize
+	for i > maxChunkSize-utf8.UTFMax && !utf8.RuneStart(s[i]) {
+		i--
+	}
+	return i, 0
 }
 
 func validateAddr(addr string) error {
