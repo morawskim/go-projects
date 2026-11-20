@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"os"
 	"path/filepath"
+	"smtp/internal"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -217,7 +218,7 @@ func main() {
 	server.MaxRecipients = 10
 	server.AllowInsecureAuth = true
 
-	logger.Info(fmt.Sprintf("Starting server at %s", server.Addr))
+	logger.Info(fmt.Sprintf("Starting server %s (%s) at %s", internal.Version, internal.Commit, server.Addr))
 	if err := server.ListenAndServe(); err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
