@@ -2,3 +2,4 @@
 /gosmtp
 gosmtp_*.deb
 gosmtp-*.rpm
+Makefile.local

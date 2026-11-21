@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"net/mail"
 	"os"
 	"path/filepath"
@@ -17,10 +18,12 @@ import (
 
 	"github.com/containrrr/shoutrrr"
 	"github.com/emersion/go-smtp"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var notificationURL string
 var addr string
+var addrMetrics string
 
 type Backend struct{}
 type Session struct {
@@ -47,6 +50,7 @@ func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 
 func (s *Session) Data(r io.Reader) error {
 	if b, err := io.ReadAll(r); err != nil {
+		internal.IncreaseForwardedMailsMetric(true)
 		return err
 	} else {
 		chunks := splitStringIntoChunks(string(b))
@@ -54,10 +58,13 @@ func (s *Session) Data(r io.Reader) error {
 			err := shoutrrr.Send(notificationURL, chunk)
 			if err != nil {
 				slog.Default().Error(fmt.Sprintf("Cannot forward message: %v", err))
+				internal.IncreaseForwardedMailsMetric(true)
 				return errors.New("cannot forward message")
 			}
 		}
 	}
+
+	internal.IncreaseForwardedMailsMetric(false)
 	return nil
 }
 
@@ -189,7 +196,9 @@ func main() {
 
 	flag.StringVar(&notificationURL, "notification-url", "", "Notification url")
 	flag.StringVar(&addr, "addr", "127.0.0.1:25", "SMTP server listening address in host:port format")
+	flag.StringVar(&addrMetrics, "metrics-addr", "127.0.0.1:8025", "Metrics listing address in host:port format")
 	flag.Parse()
+	internal.MustRegisterMetrics()
 
 	if notificationURL == "" {
 		val, err := readCredential("NOTIFICATION_URL")
@@ -207,6 +216,19 @@ func main() {
 		slog.Default().Error("Invalid address")
 		os.Exit(1)
 	}
+
+	if validateAddr(addrMetrics) != nil {
+		slog.Default().Error("Invalid metrics address")
+		os.Exit(1)
+	}
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		err := http.ListenAndServe(addrMetrics, nil)
+		if err != nil {
+			slog.Default().Error(err.Error())
+		}
+	}()
 
 	server := smtp.NewServer(&Backend{})
 	defer server.Close()
